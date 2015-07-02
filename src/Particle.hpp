@@ -111,6 +111,7 @@ namespace espressopp {
   struct ParticleForce {
 
     Real3D f;
+    Real3D fm;
     // force associated with second derivative of particle radius
     real fradius;
 
@@ -121,14 +122,17 @@ namespace espressopp {
     ParticleForce& operator+=(const ParticleForce& otherF) {
       f += otherF.f;
       fradius += otherF.fradius;
+      fm += otherF.fm;
       return *this;
     }
   private:
     friend class boost::serialization::access;
     template< class Archive >
     void serialize(Archive &ar, const unsigned int version){
-      for (int i = 0; i < 3; ++i)
+      for (int i = 0; i < 3; ++i){
         ar & f[i];
+        ar & fm[i];
+      }
       ar & fradius;
     }
   };
@@ -207,6 +211,7 @@ namespace espressopp {
       p.lambdaDeriv  = 0.0;
       r.extVar       = 0.0;      
       p.state        = 0;
+      p.pib          = 0;
     }
 
     // getter and setter used for export in Python
@@ -282,6 +287,12 @@ namespace espressopp {
     real getFRadius() const { return f.fradius; }
     void setFRadius(const real &fr) { f.fradius = fr; }
 
+    Real3D& forcem() { return f.fm; }
+    const Real3D& forcem() const { return f.fm; }
+
+    Real3D getFm() const { return f.fm; }
+    void setFm(const Real3D& force) { f.fm = force; }
+    
     // Momentum
 
     Real3D& velocity() { return m.v; }

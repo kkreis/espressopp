@@ -162,6 +162,7 @@ class StorageLocal(object):
             index_lambda_adr  = -1
             index_lambda_adrd = -1
             index_state       = -1
+            index_pib         = -1
             
             last_pos = toReal3DFromVector([-99,-99,-99])
 
@@ -187,6 +188,7 @@ class StorageLocal(object):
                     elif val.lower() == "lambda_adr": index_lambda_adr = nindex
                     elif val.lower() == "lambda_adrd": index_lambda_adrd = nindex
                     elif val.lower() == "state": index_state = nindex
+                    elif val.lower() == "pib": index_pib = nindex
                     else: raise SyntaxError("unknown particle property: %s"%val)
                     nindex += 1
 
@@ -252,6 +254,9 @@ class StorageLocal(object):
 
                     if index_type >= 0:
                         storedParticle.type = particle[index_type]
+                        
+                    if index_pib >= 0:
+                        storedParticle.pib = particle[index_pib]
 
                     if index_mass >= 0:
                         storedParticle.mass = particle[index_mass]
@@ -279,6 +284,7 @@ class StorageLocal(object):
                                                     particle.imageBox  = Int3D(0, 0, 0)
                   elif property.lower() == "img"  : particle.imageBox = value
                   elif property.lower() == "type" : particle.type = value
+                  elif property.lower() == "pib" : particle.pib = value
                   elif property.lower() == "mass" : particle.mass = value
                   elif property.lower() == "v"    : particle.v    = value
                   elif property.lower() == "f"    : particle.f    = value

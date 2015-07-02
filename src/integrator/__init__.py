@@ -24,6 +24,7 @@ pmiimport('espressopp.integrator')
 
 from espressopp.integrator.MDIntegrator import *
 from espressopp.integrator.VelocityVerlet import *
+from espressopp.integrator.VelocityVerletPI import *
 from espressopp.integrator.VelocityVerletOnGroup import *
 from espressopp.integrator.Isokinetic import *
 from espressopp.integrator.StochasticVelocityRescaling import *
@@ -33,6 +34,7 @@ from espressopp.integrator.OnTheFlyFEC import *
 
 from espressopp.integrator.Extension import *
 from espressopp.integrator.Adress import *
+from espressopp.integrator.AdressPI import *
 from espressopp.integrator.BerendsenBarostat import *
 from espressopp.integrator.BerendsenBarostatAnisotropic import *
 from espressopp.integrator.BerendsenThermostat import *

@@ -80,7 +80,8 @@ namespace espressopp {
                       shared_ptr <FixedTripleList>,
                       shared_ptr<FixedTupleListAdress>,
                       shared_ptr <TabulatedAngular>,
-                      int>())
+                      int,
+                      bool>())
                 .def("setPotential", &FixedTripleListPIadressTabulatedAngular::setPotential)
                 .def("getFixedTripleList", &FixedTripleListPIadressTabulatedAngular::getFixedTripleList);            
         }

@@ -50,8 +50,8 @@ namespace espressopp {
     
     public:
       VerletListPIadressInteractionTemplate
-      (shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter)
-                : verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter) {
+      (shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, bool _speedup)
+                : verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter), speedup(_speedup) {
 
           potentialArrayQM = esutil::Array2D<PotentialQM, esutil::enlarge>(0, 0, PotentialQM());
           potentialArrayCL = esutil::Array2D<PotentialCL, esutil::enlarge>(0, 0, PotentialCL());
@@ -84,6 +84,11 @@ namespace espressopp {
       void
       setNTrotter(int _ntrotter) {
           ntrotter = _ntrotter;
+      }
+      
+      void
+      setSpeedup(bool _speedup) {
+          speedup = _speedup;
       }
 
       void
@@ -143,6 +148,7 @@ namespace espressopp {
       real dhy;
       real dex2; // dex^2
       int ntrotter; // Trotter number
+      bool speedup; // Choose whether to approximate rings in Classical region by single particles
       // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to set to set up...
       //std::map<Particle*, real> energydiff;  // Energydifference V_AA - V_CG map for particles in hybrid region for drift term calculation in H-AdResS
       std::set<Particle*> adrZone;  // Virtual particles in AdResS zone (HY and AT region)
@@ -182,11 +188,77 @@ namespace espressopp {
         Particle &p2 = *it->second;
                   
         // Calculate forces in CL region
-        const PotentialCL &potentialCL = getPotentialCL(p1.type(), p2.type());
-        Real3D forcecl(0.0, 0.0, 0.0);
-        if(potentialCL._computeForce(forcecl, p1, p2)) {     
-             p1.force() += forcecl;
-             p2.force() -= forcecl;  
+        if (speedup == true) {
+            const PotentialCL &potentialCL = getPotentialCL(p1.type(), p2.type());
+            Real3D forcecl(0.0, 0.0, 0.0);
+            if(potentialCL._computeForce(forcecl, p1, p2)) {     
+                 p1.force() += forcecl;
+                 p2.force() -= forcecl;  
+            }
+        }
+        else{
+            // Get the corresponding tuples
+            FixedTupleListAdress::iterator it3;
+            FixedTupleListAdress::iterator it4;
+            it3 = fixedtupleList->find(&p1);
+            it4 = fixedtupleList->find(&p2);
+            
+            if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+                // Get the PI bead lists (i.e. the AdResS particles)
+                std::vector<Particle*> atList1;
+                std::vector<Particle*> atList2;
+                atList1 = it3->second;
+                atList2 = it4->second;
+
+                // Iterate the two iterators in a parallel fashion
+                std::vector<Particle*>::iterator itv2 = atList2.begin();
+                for (std::vector<Particle*>::iterator itv = atList1.begin();
+                        itv != atList1.end(); ++itv) {
+
+                    // they should be the same length... Total Trotter beads the same everywhere in the system
+                    if (itv2 == atList2.end()){
+                        std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " << 
+                        p1.id() << "\n";
+                        exit(1);
+                        return;
+                    }
+
+                    // Get the individual PI beads
+                    Particle &p3 = **itv;
+                    Particle &p4 = **itv2;
+
+                    // the beads we get should have the same Trotter bead number to interact with each other
+                    if (p3.pib() != p4.pib()){
+                        std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " << 
+                        p3.id() << " and " << p4.id() << "\n";
+                        exit(1);
+                        return;
+                    }
+                
+                    // Calculate CL forces
+                    const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
+                    Real3D forcecl(0.0, 0.0, 0.0);
+                    if(potentialCL._computeForce(forcecl, p3, p4)) {
+                         forcecl *= 1.0/ntrotter;
+                         p3.force() += forcecl;
+                         p4.force() -= forcecl;  
+                    }
+
+                    //Iterate the second iterator
+                    ++itv2;
+
+                }
+             
+            }
+            else{ // this should not happen
+                std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+                         p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+                std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+                exit(1);
+                return;
+            }
+               
         }
         
       }
@@ -395,15 +467,76 @@ namespace espressopp {
       // Pairs not inside the QM/Hybrid Zone (i.e. CL region)
       
       // REMOVE FOR IDEAL GAS 
-      real e = 0.0;        
+      real e = 0.0;
       for (PairList::Iterator it(verletList->getPairs()); 
            it.isValid(); ++it) {
           Particle &p1 = *it->first;
           Particle &p2 = *it->second;
           int type1 = p1.type();
           int type2 = p2.type();
-          const PotentialCL &potential = getPotentialCL(type1, type2);
-          e += potential._computeEnergy(p1, p2);
+          
+          if(speedup = true){
+             const PotentialCL &potential = getPotentialCL(type1, type2);
+             e += potential._computeEnergy(p1, p2);
+          }
+          else{
+             // Get the corresponding tuples
+             FixedTupleListAdress::iterator it3;
+             FixedTupleListAdress::iterator it4;
+             it3 = fixedtupleList->find(&p1);
+             it4 = fixedtupleList->find(&p2);
+             
+             if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+                 // Get the PI bead lists (i.e. the AdResS particles)
+                 std::vector<Particle*> atList1;
+                 std::vector<Particle*> atList2;
+                 atList1 = it3->second;
+                 atList2 = it4->second;
+
+                 // Iterate the two iterators in a parallel fashion
+                 std::vector<Particle*>::iterator itv2 = atList2.begin();
+                 for (std::vector<Particle*>::iterator itv = atList1.begin();
+                         itv != atList1.end(); ++itv) {
+
+                     // they should be the same length... Total Trotter beads the same everywhere in the system
+                     if (itv2 == atList2.end()){
+                         std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " << 
+                         p1.id() << "\n";
+                         exit(1);
+                         return 0.0;
+                     }
+
+                     // Get the individual PI beads
+                     Particle &p3 = **itv;
+                     Particle &p4 = **itv2;
+
+                     // the beads we get should have the same Trotter bead number to interact with each other
+                     if (p3.pib()!= p4.pib()){
+                         std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " << 
+                         p3.id() << " and " << p4.id() << "\n";
+                         exit(1);
+                         return 0.0;
+                     }
+
+                     // Calculate CL energy
+                     const PotentialCL &potential = getPotentialCL(p3.type(), p4.type());
+                     e += (1.0/ntrotter)*potential._computeEnergy(p3, p4);
+
+                     //Iterate the second iterator
+                     ++itv2;
+
+                 }
+
+             }
+             else { // this should not happen
+                 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+                         p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+                 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+                 exit(1);
+                 return 0.0;
+             }             
+          }
       }
       // REMOVE FOR IDEAL GAS
            

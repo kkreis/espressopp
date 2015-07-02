@@ -88,6 +88,7 @@ namespace espressopp {
         boost::signals2::signal0 <void> aftIntP; // after  integrate1()
         boost::signals2::signal0 <void> aftInitF; // after initForces()
         boost::signals2::signal0 <void> aftCalcF; // after calcForces()
+        boost::signals2::signal0 <void> aftCalcFslow; // after calcForces()
         boost::signals2::signal0 <void> befIntV; // before integrate2()
         boost::signals2::signal0 <void> aftIntV; // after  integrate2()
 

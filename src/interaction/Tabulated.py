@@ -78,9 +78,9 @@ class VerletListHadressTabulatedLocal(InteractionLocal, interaction_VerletListHa
             
 class VerletListPIadressTabulatedLocal(InteractionLocal, interaction_VerletListPIadressTabulated):
     'The (local) tabulated interaction using Verlet lists.'
-    def __init__(self, vl, fixedtupleList, ntrotter):
+    def __init__(self, vl, fixedtupleList, ntrotter, speedup):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_VerletListPIadressTabulated, vl, fixedtupleList, ntrotter)
+            cxxinit(self, interaction_VerletListPIadressTabulated, vl, fixedtupleList, ntrotter, speedup)
 
     def setPotentialQM(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -127,9 +127,9 @@ class FixedPairListTabulatedLocal(InteractionLocal, interaction_FixedPairListTab
 
 class FixedPairListPIadressTabulatedLocal(InteractionLocal, interaction_FixedPairListPIadressTabulated):
     'The (local) tabulated interaction using FixedPair PI lists.'
-    def __init__(self, system, vl, fixedtupleList, potential, ntrotter):
+    def __init__(self, system, vl, fixedtupleList, potential, ntrotter, speedup):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_FixedPairListPIadressTabulated, system, vl, fixedtupleList, potential, ntrotter)
+            cxxinit(self, interaction_FixedPairListPIadressTabulated, system, vl, fixedtupleList, potential, ntrotter, speedup)
 
     def setPotential(self, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():

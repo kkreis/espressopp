@@ -35,6 +35,7 @@ namespace espressopp {
       .add_property("mass", &Particle::getMass, &Particle::setMass)
       .add_property("pos", &Particle::getPos, &Particle::setPos)
       .add_property("f", &Particle::getF, &Particle::setF)
+      .add_property("fm", &Particle::getFm, &Particle::setFm)
       .add_property("v", &Particle::getV, &Particle::setV)
       .add_property("modepos", &Particle::getModepos, &Particle::setModepos)
       .add_property("q", &Particle::getQ, &Particle::setQ)

@@ -86,6 +86,11 @@ class ParticleLocal(object):
     def f(self, val): self.__getTmp().f = toReal3DFromVector(val)
 
     @property
+    def fm(self): return self.__getTmp().fm
+    @f.setter
+    def fm(self, val): self.__getTmp().fm = toReal3DFromVector(val)
+
+    @property
     def v(self): return self.__getTmp().v
     @v.setter
     def v(self, val): self.__getTmp().v = toReal3DFromVector(val)

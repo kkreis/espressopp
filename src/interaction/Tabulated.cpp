@@ -105,7 +105,8 @@ namespace espressopp {
         ("interaction_VerletListPIadressTabulated",
            init <shared_ptr<VerletListAdress>,
                  shared_ptr<FixedTupleListAdress>,
-                 int>()
+                 int,
+                 bool>()
                 )
             .def("setPotentialQM", &VerletListPIadressTabulated::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressTabulated::setPotentialCL);
@@ -134,9 +135,10 @@ namespace espressopp {
                 shared_ptr<FixedPairList>,
                 shared_ptr<FixedTupleListAdress>,
                 shared_ptr<Tabulated>,
-                int>()
+                int,
+                bool>()
         )
-        .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress>, shared_ptr<FixedTupleListAdress>, shared_ptr<Tabulated>, int>())
+        .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress>, shared_ptr<FixedTupleListAdress>, shared_ptr<Tabulated>, int, bool>())
         .def("setPotential", &FixedPairListTabulated::setPotential)
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);

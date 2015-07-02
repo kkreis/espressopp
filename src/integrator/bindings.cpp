@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012,2013,2014,2015
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -23,6 +23,7 @@
 #include "bindings.hpp"
 #include "MDIntegrator.hpp"
 #include "VelocityVerlet.hpp"
+#include "VelocityVerletPI.hpp"
 #include "VelocityVerletOnGroup.hpp"
 
 #include "Extension.hpp"
@@ -30,6 +31,7 @@
 #include "FreeEnergyCompensation.hpp"
 #include "OnTheFlyFEC.hpp"
 #include "Adress.hpp"
+#include "AdressPI.hpp"
 #include "BerendsenBarostat.hpp"
 #include "BerendsenBarostatAnisotropic.hpp"
 #include "BerendsenThermostat.hpp"
@@ -64,9 +66,11 @@ namespace espressopp {
     void registerPython() {
       MDIntegrator::registerPython();
       VelocityVerlet::registerPython();
+      VelocityVerletPI::registerPython();
       VelocityVerletOnGroup::registerPython();
       Extension::registerPython();
       Adress::registerPython();
+      AdressPI::registerPython();
       BerendsenBarostat::registerPython();
       BerendsenBarostatAnisotropic::registerPython();
       BerendsenThermostat::registerPython();
@@ -87,7 +91,7 @@ namespace espressopp {
       LBInitPeriodicForce::registerPython();
       LBInitPopUniform::registerPython();
       LBInitPopWave::registerPython();
-			LiquidGasLB::registerPython();
+      LiquidGasLB::registerPython();
       ExtForce::registerPython();
       CapForce::registerPython();
       ExtAnalyze::registerPython();

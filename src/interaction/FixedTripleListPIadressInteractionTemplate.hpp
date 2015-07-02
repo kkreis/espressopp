@@ -51,9 +51,10 @@ namespace espressopp {
        shared_ptr < FixedTripleList > _fixedtripleList,
        shared_ptr <FixedTupleListAdress> _fixedtupleList,
        shared_ptr < Potential > _potential,
-       int _ntrotter)
+       int _ntrotter,
+       bool _speedup)
         : SystemAccess(_system), fixedtripleList(_fixedtripleList), fixedtupleList(_fixedtupleList),
-          potential(_potential),  ntrotter(_ntrotter)
+          potential(_potential),  ntrotter(_ntrotter), speedup(_speedup)
       {
           if (! potential) {
                 LOG4ESPP_ERROR(theLogger, "NULL potential");
@@ -80,6 +81,11 @@ namespace espressopp {
       void
       setNTrotter(int _ntrotter) {
           ntrotter = _ntrotter;
+      }
+      
+      void
+      setSpeedup(bool _speedup) {
+          speedup = _speedup;
       }
 
       /*void
@@ -118,6 +124,7 @@ namespace espressopp {
     protected:
       int ntypes;
       int ntrotter; // Trotter number
+      bool speedup; // Choose whether to approximate rings in Classical region by single particles
       shared_ptr<FixedTripleList> fixedtripleList;
       shared_ptr<FixedTupleListAdress> fixedtupleList;
       //esutil::Array2D<Potential, esutil::enlarge> potentialArray;
@@ -143,15 +150,92 @@ namespace espressopp {
         real w3 = p3.lambda();        
         
         // Completely in classical region?
-        if ( (w1 < 0.0000001) && (w2 < 0.0000001) && (w3 < 0.0000001) ) {
-            Real3D dist12, dist32;
-            bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
-            bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
-            Real3D force12, force32;
-            potential->_computeForce(force12, force32, dist12, dist32);
-            p1.force() += force12;
-            p2.force() -= force12 + force32;
-            p3.force() += force32;
+        if ( (w1 < 0.000000001) && (w2 < 0.000000001) && (w3 < 0.000000001) ) {
+            
+            if(speedup == true){
+                Real3D dist12, dist32;
+                bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
+                bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
+                Real3D force12, force32;
+                potential->_computeForce(force12, force32, dist12, dist32);
+                p1.force() += force12;
+                p2.force() -= force12 + force32;
+                p3.force() += force32;
+            }
+            else{
+                // Get the corresponding tuples
+                FixedTupleListAdress::iterator it4;
+                FixedTupleListAdress::iterator it5;
+                FixedTupleListAdress::iterator it6;
+                it4 = fixedtupleList->find(&p1);
+                it5 = fixedtupleList->find(&p2);
+                it6 = fixedtupleList->find(&p3);
+                
+                if (it4 != fixedtupleList->end() && it5 != fixedtupleList->end() && it6 != fixedtupleList->end()) {
+            
+                    // Get the PI bead lists (i.e. the AdResS particles)
+                    std::vector<Particle*> atList1;
+                    std::vector<Particle*> atList2;
+                    std::vector<Particle*> atList3;
+                    atList1 = it4->second;
+                    atList2 = it5->second;
+                    atList3 = it6->second;
+
+                    // Iterate the two iterators in a parallel fashion
+                    std::vector<Particle*>::iterator itv2 = atList2.begin();
+                    std::vector<Particle*>::iterator itv3 = atList3.begin();
+                    for (std::vector<Particle*>::iterator itv = atList1.begin();
+                         itv != atList1.end(); ++itv) {
+
+                         // they should be the same length... Total Trotter beads the same everywhere in the system
+                         if (itv2 == atList2.end() || itv3 == atList3.end()){
+                             std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " << 
+                             p1.id() << "\n";
+                             exit(1);
+                             return;
+                         }
+
+                         // Get the individual PI beads
+                         Particle &p4 = **itv;
+                         Particle &p5 = **itv2;
+                         Particle &p6 = **itv3;
+
+                         // the beads we get should have the same Trotter bead number to interact with each other
+                         if (p4.pib() != p5.pib() || p5.pib() != p6.pib()){
+                             std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " << 
+                             p4.id() << " and " << p5.id() << " and " << p6.id() << "\n";
+                             exit(1);
+                             return;
+                         }
+
+                         // Calculate forces
+                         Real3D dist12, dist32;
+                         bc.getMinimumImageVectorBox(dist12, p4.position(), p5.position());
+                         bc.getMinimumImageVectorBox(dist32, p6.position(), p5.position());
+                         Real3D force12, force32;
+                         potential->_computeForce(force12, force32, dist12, dist32);
+                         force12 *= 1.0/ntrotter;
+                         force32 *= 1.0/ntrotter;
+                         p4.force() += force12;
+                         p5.force() -= force12 + force32;
+                         p6.force() += force32;                
+
+                         //Iterate the second and third iterator
+                         ++itv2;
+                         ++itv3;
+
+                    }               
+                }
+                else { // this should not happen
+                   std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+                         p1.ghost() << ", " << p2.id() << "-" << p2.ghost() << ", " << p3.id() << "-" << p3.ghost();
+                   std::cout << " (" << p1.position() << ") (" << p2.position() << ") (" << p3.position() << ") \n";
+                   exit(1);
+                   return;
+                }              
+                
+            }
+            
         }
         // Otherwise...
         else{ 
@@ -250,10 +334,78 @@ namespace espressopp {
         real w3 = p3.lambda();        
         
         // Completely in classical region?
-        if ( (w1 < 0.0000001) && (w2 < 0.0000001) && (w3 < 0.0000001) ) {
-            Real3D dist12 = bc.getMinimumImageVector(p1.position(), p2.position());
-            Real3D dist32 = bc.getMinimumImageVector(p3.position(), p2.position());
-            e += potential->_computeEnergy(dist12, dist32);
+        if ( (w1 < 0.000000001) && (w2 < 0.000000001) && (w3 < 0.000000001) ) {
+            
+            if(speedup == true){
+                Real3D dist12 = bc.getMinimumImageVector(p1.position(), p2.position());
+                Real3D dist32 = bc.getMinimumImageVector(p3.position(), p2.position());
+                e += potential->_computeEnergy(dist12, dist32);
+            }
+            else{
+                // Get the corresponding tuples
+                FixedTupleListAdress::iterator it4;
+                FixedTupleListAdress::iterator it5;
+                FixedTupleListAdress::iterator it6;
+                it4 = fixedtupleList->find(&p1);
+                it5 = fixedtupleList->find(&p2);
+                it6 = fixedtupleList->find(&p3);                
+                
+                
+                if (it4 != fixedtupleList->end() && it5 != fixedtupleList->end() && it6 != fixedtupleList->end()) {
+
+                    // Get the PI bead lists (i.e. the AdResS particles)
+                    std::vector<Particle*> atList1;
+                    std::vector<Particle*> atList2;
+                    std::vector<Particle*> atList3;
+                    atList1 = it4->second;
+                    atList2 = it5->second;
+                    atList3 = it6->second;
+
+                    // Iterate the two iterators in a parallel fashion
+                    std::vector<Particle*>::iterator itv2 = atList2.begin();
+                    std::vector<Particle*>::iterator itv3 = atList3.begin();
+                    for (std::vector<Particle*>::iterator itv = atList1.begin();
+                         itv != atList1.end(); ++itv) {
+
+                         // they should be the same length... Total Trotter beads the same everywhere in the system
+                         if (itv2 == atList2.end() || itv3 == atList3.end()){
+                             std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " << 
+                             p1.id() << "\n";
+                             exit(1);
+                             return 0.0;
+                         }
+
+                         // Get the individual PI beads
+                         Particle &p4 = **itv;
+                         Particle &p5 = **itv2;
+                         Particle &p6 = **itv3;
+
+                         // the beads we get should have the same Trotter bead number to interact with each other
+                         if (p4.pib() != p5.pib() || p5.pib() != p6.pib()){
+                             std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " << 
+                             p4.id() << " and " << p5.id() << " and " << p6.id() << "\n";
+                             exit(1);
+                             return 0.0;
+                         }
+
+                         // Calculate energies
+                         Real3D dist12 = bc.getMinimumImageVector(p4.position(), p5.position());
+                         Real3D dist32 = bc.getMinimumImageVector(p6.position(), p5.position());
+                         e += (1.0/ntrotter)*potential->_computeEnergy(dist12, dist32);
+
+                         // Iterate the second and third iterator
+                         ++itv2;
+                         ++itv3;
+                    }               
+                }
+                else { // this should not happen
+                   std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+                         p1.ghost() << ", " << p2.id() << "-" << p2.ghost() << ", " << p3.id() << "-" << p3.ghost();
+                   std::cout << " (" << p1.position() << ") (" << p2.position() << ") (" << p3.position() << ") \n";
+                   exit(1);
+                   return 0.0;
+                } 
+            }
         }
         // Otherwise...
         else{  

@@ -54,9 +54,9 @@ class FixedTripleListTabulatedAngularLocal(InteractionLocal, interaction_FixedTr
 
 class FixedTripleListPIadressTabulatedAngularLocal(InteractionLocal, interaction_FixedTripleListPIadressTabulatedAngular):
     'The (local) tanulated angular interaction using FixedTriple lists.'
-    def __init__(self, system, vl, fixedtupleList, potential, ntrotter):
+    def __init__(self, system, vl, fixedtupleList, potential, ntrotter, speedup):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_FixedTripleListPIadressTabulatedAngular, system, vl, fixedtupleList, potential, ntrotter)
+            cxxinit(self, interaction_FixedTripleListPIadressTabulatedAngular, system, vl, fixedtupleList, potential, ntrotter, speedup)
 
     def setPotential(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
