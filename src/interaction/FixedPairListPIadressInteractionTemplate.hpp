@@ -127,7 +127,7 @@ namespace espressopp {
     //////////////////////////////////////////////////
     template < typename _Potential > inline void
     FixedPairListPIadressInteractionTemplate < _Potential >::addForces() {
-        
+        //std::cout << "Adding Forces in FixedPairListPIadressInteractionTemplate\n";
       LOG4ESPP_INFO(_Potential::theLogger, "adding forces of FixedPairList");
       const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
       real ltMaxBondSqr = fixedpairList->getLongtimeMaxBondSqr();
@@ -287,6 +287,8 @@ namespace espressopp {
                        force *= 1.0/ntrotter;
                        p3.force() += force;
                        p4.force() -= force;
+                       //std::cout << "FixedPair real force per bead: " << force <<"\n";
+                       
                        LOG4ESPP_DEBUG(_Potential::theLogger, "p" << p1.id() << "(" << p1.position()[0] << "," << p1.position()[1] << "," << p1.position()[2] << ") "
                                                                  << "p" << p2.id() << "(" << p2.position()[0] << "," << p2.position()[1] << "," << p2.position()[2] << ") "
                                                                  << "dist=" << sqrt(dist*dist) << " "

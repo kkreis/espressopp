@@ -150,14 +150,17 @@ class StorageLocal(object):
 
             index_id          = -1
             index_pos         = -1
+            index_modepos     = -1
             index_v           = -1
             index_f           = -1
+            index_fm          = -1
             index_q           = -1
             index_radius      = -1
             index_fradius     = -1
             index_vradius     = -1
             index_type        = -1
-            index_mass        = -1            
+            index_mass        = -1
+            index_varmass     = -1
             index_adrAT       = -1 # adress AT particle if 1
             index_lambda_adr  = -1
             index_lambda_adrd = -1
@@ -176,10 +179,13 @@ class StorageLocal(object):
                 for val in properties:
                     if val.lower() == "id": index_id = nindex
                     elif val.lower() == "pos": index_pos = nindex
+                    elif val.lower() == "modepos": index_modepos = nindex
                     elif val.lower() == "type": index_type = nindex
                     elif val.lower() == "mass": index_mass = nindex
+                    elif val.lower() == "varmass": index_varmass = nindex
                     elif val.lower() == "v": index_v = nindex
                     elif val.lower() == "f": index_f = nindex
+                    elif val.lower() == "fm": index_fm = nindex
                     elif val.lower() == "q": index_q = nindex
                     elif val.lower() == "radius": index_radius = nindex
                     elif val.lower() == "fradius": index_fradius = nindex
@@ -237,8 +243,14 @@ class StorageLocal(object):
                     if index_v >= 0:
                         storedParticle.v = particle[index_v]
 
+                    if index_modepos >= 0:
+                        storedParticle.modepos = particle[index_modepos]
+
                     if index_f >= 0:
                         storedParticle.f = particle[index_f] 
+
+                    if index_fm >= 0:
+                        storedParticle.fm = particle[index_fm] 
 
                     if index_q >= 0:
                         storedParticle.q = particle[index_q]
@@ -260,7 +272,10 @@ class StorageLocal(object):
 
                     if index_mass >= 0:
                         storedParticle.mass = particle[index_mass]
- 
+
+                    if index_varmass >= 0:
+                        storedParticle.varmass = particle[index_varmass]
+                        
                     if index_lambda_adr >= 0:
                         storedParticle.lambda_adr = particle[index_lambda_adr]
                         
@@ -282,10 +297,12 @@ class StorageLocal(object):
                   elif property.lower() == "pos"  : # alway assume unfolded coordinates
                                                     particle.pos       = value
                                                     particle.imageBox  = Int3D(0, 0, 0)
+                  elif property.lower() == "modepos"  : particle.modepos = value
                   elif property.lower() == "img"  : particle.imageBox = value
                   elif property.lower() == "type" : particle.type = value
                   elif property.lower() == "pib" : particle.pib = value
                   elif property.lower() == "mass" : particle.mass = value
+                  elif property.lower() == "varmass" : particle.varmass = value
                   elif property.lower() == "v"    : particle.v    = value
                   elif property.lower() == "f"    : particle.f    = value
                   elif property.lower() == "q"    : particle.q    = value

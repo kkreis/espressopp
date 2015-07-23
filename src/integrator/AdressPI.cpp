@@ -141,15 +141,16 @@ namespace espressopp {
                       //verletList->getSystem()->bc->getMinimumImageVectorBox(d1, at.position(), vp.position());
                       //cmp += at.mass() * d1;
                       
-                      cmp += at.position();
+                      //cmp += at.position();
                       if(at.pib() == 1)
                       {
                           cmv = at.velocity();
+                          cmp = at.position();
                       }
                       //cmp += at.mass() * at.position();
                       //cmv += at.mass() * at.velocity();
                   }
-                  cmp /= ntrotter;
+                  //cmp /= ntrotter;
                   //cmv /= vp.getMass();
                   //cmp += vp.position(); // cmp is a relative position
                   //std::cout << " cmp M: "  << M << "\n\n";
@@ -229,9 +230,15 @@ namespace espressopp {
         ParticleList& adrATparticles = system.storage->getAdrATParticles();
         for (std::vector<Particle>::iterator it = adrATparticles.begin();
                 it != adrATparticles.end(); ++it) {
+            //std::cout << "\n";
+            //std::cout << "it->force(): " << it->force() << "\n";
+            //std::cout << "it->forcem(): " << it->forcem() << "\n";
             it->force() = 0.0;
             it->forcem() = 0.0;
             it->drift() = 0.0;
+            //std::cout << "it->force(): " << it->force() << "\n";
+            //std::cout << "it->forcem(): " << it->forcem() << "\n";
+            //std::cout << "\n";
         }
 
         // AT ghosts
@@ -550,7 +557,7 @@ namespace espressopp {
                 //vp.force() +=  (vp.getMass() * at.force()) / (3.0 * at.mass());
                 
                 //at.force() += at.mass() * vpfm;
-                at.force() += vpfm;
+                at.force() += (1.0/ntrotter)*vpfm;
                 //std::cout << "Force of atomistic particle (AdResS sim.) with id " << at.id() << " is: " << at.force() << "\n";
             }
         }

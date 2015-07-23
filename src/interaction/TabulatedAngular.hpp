@@ -46,13 +46,13 @@ namespace espressopp {
              
                 TabulatedAngular(int itype, const char* filename) {
                     setFilename(itype, filename);
-                    std::cout << "using tabulated potential " << filename << "\n";
+                    //std::cout << "using tabulated potential " << filename << "\n";
                 }
              
                 TabulatedAngular(int itype, const char* filename, real cutoff) {
                     setFilename(itype, filename);
                     setCutoff(cutoff);
-                    std::cout << "using tabulated potential " << filename << "\n";
+                    //std::cout << "using tabulated potential " << filename << "\n";
                 }
              
                 void setFilename(int itype, const char* _filename);

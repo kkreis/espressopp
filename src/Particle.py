@@ -112,7 +112,7 @@ class ParticleLocal(object):
     
     @property
     def pib(self): return self.__getTmp().pib
-    @type.setter
+    @pib.setter
     def pib(self, val): self.__getTmp().pib = val
     
     @property
@@ -122,7 +122,7 @@ class ParticleLocal(object):
     
     @property
     def varmass(self): return self.__getTmp().varmass
-    @mass.setter
+    @varmass.setter
     def varmass(self, val): self.__getTmp().varmass = val
     
     @property

@@ -96,14 +96,27 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
     def getVerletList(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getVerletList(self)
+    
+    def addEigenvalues(self, evalueslist):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            for eval in evalueslist: 
+                self.cxxclass.addValues(self, eval)
+                
+    def computeRingEnergy(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.computeRingEnergy(self)
         
+    def computeKineticEnergy(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.computeKineticEnergy(self)
+                
     def addEigenvectors(self, evlist):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             for ev in evlist: 
                 for val in ev:
                     self.cxxclass.add(self, val)
-                self.cxxclass.addEV(self);
-            self.cxxclass.transp(self);
+                self.cxxclass.addEV(self)
+            self.cxxclass.transp(self)
             
 if pmi.isController :
     class VelocityVerletPI(MDIntegrator):
@@ -111,6 +124,6 @@ if pmi.isController :
         pmiproxydefs = dict(
           cls =  'espressopp.integrator.VelocityVerletPILocal',
           pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'speedup', 'verletList' ],
-          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setSpeedup', 'addEigenvectors', 'setVerletList'],
+          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setSpeedup', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy'],
           pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getSpeedup', 'getVerletList' ]
         )

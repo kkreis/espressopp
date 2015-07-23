@@ -101,7 +101,9 @@ namespace espressopp {
 
         void add(real val) { tmpvals.push_back(val); } // add particle id (called from python)
         //void addEVs() { addEV(tmpvals); tmpvals.clear(); } // add tuple (called from python)
-        void addEV() { Eigenvectors.push_back(tmpvals); tmpvals.clear();}
+        void addEV() { Tvectors.push_back(tmpvals); tmpvals.clear();}
+        
+        void addValues(real val) { Eigenvalues.push_back(val); } // add particle id (called from python)
         
         void transp();
         
@@ -168,7 +170,7 @@ namespace espressopp {
         real maxDist;
         real dt2;
         real dt3;
-        real kb;
+        //real kb;
                 
         real omega2;
         
@@ -179,6 +181,7 @@ namespace espressopp {
         
         std::vector< std::vector<real> > Eigenvectors;
         std::vector< std::vector<real> > Tvectors;
+        std::vector< real > Eigenvalues;
         
         //real maxCut;
         

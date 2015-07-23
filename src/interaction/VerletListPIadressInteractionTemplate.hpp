@@ -162,6 +162,9 @@ namespace espressopp {
     template < typename _PotentialQM, typename _PotentialCL > inline void
     VerletListPIadressInteractionTemplate < _PotentialQM, _PotentialCL >::
     addForces() {
+        
+       //std::cout << "Adding Forces in VerletListPIadressInteractionTemplate\n"; 
+        
       LOG4ESPP_INFO(theLogger, "add forces computed by the Verlet List");
  
       // Get the cg and the adrZones
@@ -182,7 +185,7 @@ namespace espressopp {
 
       // REMOVE FOR IDEAL GAS
       for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
-
+        std::cout << "If this appears -> FAIL!\n";
         // Get particles from pairlist
         Particle &p1 = *it->first;
         Particle &p2 = *it->second;
@@ -267,7 +270,7 @@ namespace espressopp {
      
       // Pairs inside the QM/Hybrid Zone      
       for (PairList::Iterator it(verletList->getAdrPairs()); it.isValid(); ++it) {
-         
+         //std::cout << "If this appears -> FAIL!\n";
          // for weights 
          real w1, w2;
          
@@ -336,7 +339,7 @@ namespace espressopp {
                      // Calculate QM forces
                      const PotentialQM &potentialQM = getPotentialQM(p3.type(), p4.type());
                      Real3D forceqm(0.0, 0.0, 0.0);
-                     if(potentialCL._computeForce(forceqm, p3, p4)) {
+                     if(potentialQM._computeForce(forceqm, p3, p4)) {
                          forceqm *= w12/ntrotter;
                          p3.force() += forceqm;
                          p4.force() -= forceqm;  

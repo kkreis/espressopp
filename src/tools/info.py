@@ -39,6 +39,7 @@ def getAllParticles(system, *properties):
         elif val.lower() == "f"     : part.append(particle.f)
         elif val.lower() == "q"     : part.append(particle.q)
         elif val.lower() == "adrat" : part.append(particle.adrat)
+        elif val.lower() == "pib"   : part.append(particle.pib)
         else: raise "unknown particle property: %s"%val
       allParticles.append(part)         
       pid   += 1

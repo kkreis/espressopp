@@ -137,6 +137,7 @@ namespace espressopp {
     template < typename _AngularPotential > inline void
     FixedTripleListPIadressInteractionTemplate <_AngularPotential>::
     addForces() {
+        //std::cout << "Adding Forces in FixedTripleListPIadressInteractionTemplate\n";
       LOG4ESPP_INFO(theLogger, "add forces computed by FixedTripleList");
       const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
       for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it) {
@@ -295,6 +296,9 @@ namespace espressopp {
                      p4.force() += force12;
                      p5.force() -= force12 + force32;
                      p6.force() += force32;                
+                     
+                     //std::cout << "FixedTriplet real force per bead: " << force12 <<"\n";
+                     //std::cout << "FixedTriplet real force per bead: " << force32 <<"\n";
                      
                      //Iterate the second and third iterator
                      ++itv2;
