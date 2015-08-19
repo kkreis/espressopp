@@ -49,12 +49,15 @@ namespace espressopp {
     real varmass;
     real drift;
     real lambdaDeriv;
+    Real3D fm;  //!!!!
     int state;
   private:
     friend class boost::serialization::access;
     template< class Archive >
     void serialize(Archive &ar, const unsigned int version)
     {
+      for (int i = 0; i < 3; ++i)
+        ar & fm[i];  //!!!!
       ar & id;
       ar & type;
       ar & pib;
@@ -111,7 +114,7 @@ namespace espressopp {
   struct ParticleForce {
 
     Real3D f;
-    Real3D fm;
+    //Real3D fm; //!!!!
     // force associated with second derivative of particle radius
     real fradius;
 
@@ -122,7 +125,7 @@ namespace espressopp {
     ParticleForce& operator+=(const ParticleForce& otherF) {
       f += otherF.f;
       fradius += otherF.fradius;
-      fm += otherF.fm;
+      //fm += otherF.fm; //!!!!
       return *this;
     }
   private:
@@ -131,7 +134,7 @@ namespace espressopp {
     void serialize(Archive &ar, const unsigned int version){
       for (int i = 0; i < 3; ++i){
         ar & f[i];
-        ar & fm[i];
+        //ar & fm[i]; //!!!!
       }
       ar & fradius;
     }
@@ -203,6 +206,7 @@ namespace espressopp {
       p.q            = 0.0;
       r.radius       = 1.0;
       f.fradius      = 0.0;
+      p.fm           = 0.0; //!!!!
       m.vradius      = 0.0;
       l.ghost        = false;
       p.lambda       = 0.0;
@@ -287,11 +291,11 @@ namespace espressopp {
     real getFRadius() const { return f.fradius; }
     void setFRadius(const real &fr) { f.fradius = fr; }
 
-    Real3D& forcem() { return f.fm; }
-    const Real3D& forcem() const { return f.fm; }
+    Real3D& forcem() { return p.fm; } //!!!!
+    const Real3D& forcem() const { return p.fm; } //!!!!
 
-    Real3D getFm() const { return f.fm; }
-    void setFm(const Real3D& force) { f.fm = force; }
+    Real3D getFm() const { return p.fm; } //!!!!
+    void setFm(const Real3D& force) { p.fm = force; } //!!!!
     
     // Momentum
 

@@ -185,7 +185,7 @@ namespace espressopp {
 
       // REMOVE FOR IDEAL GAS
       for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
-        std::cout << "If this appears -> FAIL!\n";
+        //std::cout << "If this appears -> FAIL!\n";
         // Get particles from pairlist
         Particle &p1 = *it->first;
         Particle &p2 = *it->second;

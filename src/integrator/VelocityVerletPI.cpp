@@ -554,7 +554,7 @@ namespace espressopp {
         //cout << "integrateV1(int t), t: " << t << " and half_df: " << half_dt << "\n";
                 
         System& system = getSystemRef();
-        CellList realCells = system.storage->getRealCells();
+        CellList realCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
         //cout << "IntegrateV1, half_dt: " << half_dt << " for t = " << t << "\n";
         for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
@@ -590,6 +590,9 @@ namespace espressopp {
                          exit(1);
                          return;
                     }
+                    
+                    //cout << "Force in integrateV1(int t) with t = " << t << ". Force: " << at.force() << " Modeforce: " << at.forcem() << "\n";
+                    
                 }
             
             }
@@ -610,7 +613,7 @@ namespace espressopp {
         real half_dt4 = 0.25 * dt;
                 
         System& system = getSystemRef();
-        CellList realCells = system.storage->getRealCells();
+        CellList realCells = system.storage->getRealCells();  //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
         //cout << "IntegrateV2, half_dt: " << half_dt << " and half_dt4: " << half_dt4 << "\n";
         for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
@@ -693,7 +696,7 @@ namespace espressopp {
                         real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
                         //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
                         //mindriftforceX *= 0.5;
-                        mindriftforceX *= 49.5*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+                        mindriftforceX *= 49.5*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
 
                         //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
@@ -760,7 +763,7 @@ namespace espressopp {
         real half_dt = 0.5 * dt; 
                 
         System& system = getSystemRef();
-        CellList realCells = system.storage->getRealCells();
+        CellList realCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
         //cout << "IntegrateModePos, half_dt: " << half_dt << "\n";
         for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
@@ -806,7 +809,7 @@ namespace espressopp {
         // also note that kb is inside temperature, we use gromacs units
         
         System& system = getSystemRef();
-        CellList realCells = system.storage->getRealCells();
+        CellList realCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
         
         for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
@@ -951,7 +954,7 @@ namespace espressopp {
         real maxSqDist = 0.0;
         
         System& system = getSystemRef();
-        CellList localCells = system.storage->getLocalCells();
+        CellList localCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -1039,7 +1042,7 @@ namespace espressopp {
         // Update mode positions based on real positions
         
         System& system = getSystemRef();
-        CellList localCells = system.storage->getLocalCells();
+        CellList localCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -1091,7 +1094,7 @@ namespace espressopp {
         // Update mode forces based on real forces
         
         System& system = getSystemRef();
-        CellList localCells = system.storage->getLocalCells();
+        CellList localCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -1206,7 +1209,7 @@ namespace espressopp {
       //aftInitF();
 
       System& system = getSystemRef();
-      CellList localCells = system.storage->getLocalCells();
+      CellList localCells = system.storage->getRealCells(); //!!!!
       shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
       //for (size_t i = 0; i < srIL.size(); i++) {
 	//    LOG4ESPP_INFO(theLogger, "compute forces for srIL " << i << " of " << srIL.size());
@@ -1245,7 +1248,7 @@ namespace espressopp {
                                             if(at2.pib() != 1){
                                                 //real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter));   
                                                 //xi += -49.5*omega2*at2.modepos().sqr()*chi;
-                                                xi += -49.5*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                                xi += -49.5*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
                                             }
                                         }
 
@@ -1331,7 +1334,8 @@ namespace espressopp {
                                         if(at2.pib() != 1){
                                             //real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter));
                                             //xi += -49.5*omega2*at2.modepos().sqr()*chi;
-                                            xi += -49.5*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            //xi += -49.5*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            xi += at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
                                         }
                                     }
 
@@ -1362,7 +1366,7 @@ namespace espressopp {
                                     real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
                                     //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
                                     //mindriftforceX *= 0.5;
-                                    mindriftforceX *= xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+                                    mindriftforceX *= -49.5*vp.mass()*omega2*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
 
                                     //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
@@ -1418,7 +1422,7 @@ namespace espressopp {
       { 
         //VT_TRACER("commF");
         storage.updateGhosts();
-        transPos2();
+        //transPos2();
       }
       //timeComm1 += timeIntegrate.getElapsedTime() - time;
       //time = timeIntegrate.getElapsedTime();
