@@ -55,8 +55,8 @@ namespace espressopp {
       LOG4ESPP_INFO(theLogger, "construct VelocityVerletPI");
       resortFlag = true;
       maxDist    = 0.0;
-      dt2 = sStep*dt;
-      dt3 = mStep*sStep*dt;
+      dt2 = dt*sStep;
+      dt3 = dt*mStep*sStep;
               
       // Initialize variables
       temperature = 0.0;
@@ -93,6 +93,11 @@ namespace espressopp {
         return;
       }
       
+      /*cout << "dt: " << dt << "\n";
+      cout << "dt2: " << dt2 << "\n";
+      cout << "dt3: " << dt3 << "\n";
+      cout << "sStep: " << sStep << "\n";
+      cout << "mStep: " << mStep << "\n";*/
           //DEBUG
           /*cout << "First Eigenvector: " << "( " << Eigenvectors.at(0).at(0) << ", "
                   << Eigenvectors.at(0).at(1) << ", " << Eigenvectors.at(0).at(2) << ", " << Eigenvectors.at(0).at(3) << " )\n";
@@ -331,8 +336,7 @@ namespace espressopp {
             // lstep loop
             for (int k= 0; k < sStep; k++){
                 
-                if(k==0){ updateForces(1); }
-                
+                if(k==0){ updateForces(1); }                
                 //updateForces(1);
                 integrateV2();
                 
@@ -343,7 +347,7 @@ namespace espressopp {
                 // Update real positions - don't forget the VP centroid particle (both velocity and position).
                 // Recalculate weights and mass
                 transPos1();
-                
+                //resortFlag = true; // !!!! TEST
                 // Check the VerletList, maybe rebuild it.
                 if (maxDist > skinHalf) resortFlag = true;
                 //cout << "Resort Flag in loop: " << resortFlag << "\n";
@@ -706,7 +710,7 @@ namespace espressopp {
                         //Real3D driftforceadd(0.0,0.0,0.0);   
                         //vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
                         //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";                       
-                        at.velocity() += dtfm * (at.forcem() - driftforceadd);
+                        at.velocity() += dtfm * (at.forcem() + driftforceadd); // SIGN SWITCH TESTED !!!!
                         
                         //cout << "IntegrateV2 - 2, at.forcem() - driftforceadd for pib " << at.pib() << ": " << at.forcem() - driftforceadd << "\n";
                         
@@ -1291,7 +1295,7 @@ namespace espressopp {
                                         //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
 
 
-                                        at.forcem() -= driftforceadd;
+                                        at.forcem() += driftforceadd; // SIGN SWITCH TESTED !!!!
                                     }
                                   }
                                   else{
@@ -1650,8 +1654,8 @@ namespace espressopp {
       }*/
 
       dt = _dt;
-      dt2 = sStep*dt;
-      dt3 = mStep*sStep*dt;
+      dt2 = dt*sStep;
+      dt3 = dt*mStep*sStep;
     }
     
     void VelocityVerletPI::setmStep(int _mStep)
