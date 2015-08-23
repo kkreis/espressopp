@@ -359,7 +359,7 @@ namespace espressopp {
                     cout << "VerletList Updates: " << UpdateCounter << "\n";
                     //cout << "DECOMPOSING in loop!\n";
                     storage.decompose();
-                    //transPos2();
+                    transPos2();
                     maxDist  = 0.0;
                     resortFlag = false;
                 }               
