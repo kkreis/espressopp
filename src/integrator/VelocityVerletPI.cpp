@@ -1015,6 +1015,16 @@ namespace espressopp {
 
                   }
                   
+                  //DEBUGGING
+                  if((vp.id() == 49201) || (vp.id() == 49202) || (vp.id() == 49203))
+                  {
+                      cout << "VP Particle ID: " << vp.id() << " at position " << vp.position() << " Ghost? " << vp.ghost() << "\n"; 
+                  }
+                  //DEBUGGING
+                  
+                  
+                  
+                  
                   //real sqDist = (oldpos-vp.position())*(oldpos-vp.position());
                   real sqDist = (oldpos-vp.position()).sqr();
                   maxSqDist = std::max(maxSqDist, sqDist);
