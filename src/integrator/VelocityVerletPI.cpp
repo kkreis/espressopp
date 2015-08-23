@@ -65,6 +65,9 @@ namespace espressopp {
       speedup = false;
       sStep = 0;
       mStep = 0;
+      
+      UpdateCounter = 0;
+      
       //verletList = NULL;
       
       //kb = 1.3806488;//*pow(10.0,-23); // FIX
@@ -352,6 +355,7 @@ namespace espressopp {
                 if (maxDist > skinHalf) resortFlag = true;
                 //cout << "Resort Flag in loop: " << resortFlag << "\n";
                 if (resortFlag) {
+                    UpdateCounter += 1; // DEBUGGING AND DECOMPOSING
                     //cout << "DECOMPOSING in loop!\n";
                     storage.decompose();
                     //transPos2();

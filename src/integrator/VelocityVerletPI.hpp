@@ -171,6 +171,8 @@ namespace espressopp {
         real dt2;
         real dt3;
         //real kb;
+        
+        int UpdateCounter; // JUST FOR CHECKING AND DEBUGGING
                 
         real omega2;
         
