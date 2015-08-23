@@ -970,11 +970,14 @@ namespace espressopp {
                   std::vector<Particle*> atList;
                   atList = it2->second;
 
+                  Real3D oldpos = vp.position();
+                  //cout << "oldpos: " << oldpos << "\n";
+                  
                   for (std::vector<Particle*>::iterator it3 = atList.begin();
                                        it3 != atList.end(); ++it3) {
                       Particle &at = **it3;
                       
-                      Real3D oldpos = vp.position();
+                      //Real3D oldpos = vp.position();
                       //cout << "oldpos: " << oldpos << "\n";
                       Real3D zero(0.0,0.0,0.0);
                       at.position()=zero;
@@ -987,7 +990,7 @@ namespace espressopp {
                               at.position()+= sqrt(ntrotter)*at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
                               
                               // Update VP particle (this thing is executed too often... but this shouldn't matter, might be fixed later)
-                              if(at2.pib() == 1){
+                              if((at2.pib() == 1) && (at.pib() == 1)){
                                   //vp.position() = at.position();
                                   //vp.velocity() = at.velocity();
                                   vp.position() = at2.modepos();
@@ -1006,11 +1009,15 @@ namespace espressopp {
                       
                       //cout << "newpos: " << vp.position() << "\n";
                       
-                      real sqDist = (oldpos-vp.position())*(oldpos-vp.position());
-                      maxSqDist = std::max(maxSqDist, sqDist);
+                      //real sqDist = (oldpos-vp.position())*(oldpos-vp.position());   // !!!
+                      //maxSqDist = std::max(maxSqDist, sqDist);     // !!!
                       //cout << "maxSqDist: " << maxSqDist << "\n"; 
 
                   }
+                  
+                  //real sqDist = (oldpos-vp.position())*(oldpos-vp.position());
+                  real sqDist = (oldpos-vp.position()).sqr();
+                  maxSqDist = std::max(maxSqDist, sqDist);
                   
                   /*//cout << "transPos1(), at.position() for pib: " << at.pib() << ", ghost: " << vp.ghost() << ", position: " << at.position() <<  ", modepos: " << at.modepos() << "\n";
 
@@ -1032,7 +1039,7 @@ namespace espressopp {
         }
       
         // signal
-        inIntP(maxSqDist);
+        //inIntP(maxSqDist);
 
         real maxAllSqDist;
         mpi::all_reduce(*system.comm, maxSqDist, maxAllSqDist, boost::mpi::maximum<real>());
@@ -1057,7 +1064,7 @@ namespace espressopp {
             if(it2 != fixedtupleList->end()){
                   std::vector<Particle*> atList;
                   atList = it2->second;
-                  int pib_check = 0;
+                  //int pib_check = 0;
                   for (std::vector<Particle*>::iterator it3 = atList.begin();
                                        it3 != atList.end(); ++it3) {
                       Particle &at = **it3;
