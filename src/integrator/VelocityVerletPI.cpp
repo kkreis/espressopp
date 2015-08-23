@@ -356,6 +356,7 @@ namespace espressopp {
                 //cout << "Resort Flag in loop: " << resortFlag << "\n";
                 if (resortFlag) {
                     UpdateCounter += 1; // DEBUGGING AND DECOMPOSING
+                    cout << "VerletList Updates: " << UpdateCounter << "\n";
                     //cout << "DECOMPOSING in loop!\n";
                     storage.decompose();
                     //transPos2();
