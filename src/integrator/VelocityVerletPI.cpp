@@ -355,8 +355,8 @@ namespace espressopp {
                 if (maxDist > skinHalf) resortFlag = true;
                 //cout << "Resort Flag in loop: " << resortFlag << "\n";
                 if (resortFlag) {
-                    UpdateCounter += 1; // DEBUGGING AND DECOMPOSING
-                    cout << "VerletList Updates: " << UpdateCounter << "\n";
+                    //UpdateCounter += 1; // DEBUGGING AND DECOMPOSING
+                    //cout << "VerletList Updates: " << UpdateCounter << "\n";
                     //cout << "DECOMPOSING in loop!\n";
                     storage.decompose();
                     transPos2();
@@ -715,7 +715,7 @@ namespace espressopp {
                         //Real3D driftforceadd(0.0,0.0,0.0);   
                         //vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
                         //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";                       
-                        at.velocity() += dtfm * (at.forcem() + driftforceadd); // SIGN SWITCH TESTED !!!!
+                        at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
                         
                         //cout << "IntegrateV2 - 2, at.forcem() - driftforceadd for pib " << at.pib() << ": " << at.forcem() - driftforceadd << "\n";
                         
@@ -1021,10 +1021,10 @@ namespace espressopp {
                   }
                   
                   //DEBUGGING
-                  if((vp.id() == 49201) || (vp.id() == 49202) || (vp.id() == 49203))
+                  /*if((vp.id() == 49201) || (vp.id() == 49202) || (vp.id() == 49203))
                   {
                       cout << "VP Particle ID: " << vp.id() << " at position " << vp.position() << " Ghost? " << vp.ghost() << "\n"; 
-                  }
+                  }*/
                   //DEBUGGING
                   
                   
@@ -1317,7 +1317,7 @@ namespace espressopp {
                                         //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
 
 
-                                        at.forcem() += driftforceadd; // SIGN SWITCH TESTED !!!!
+                                        at.forcem() -= driftforceadd; // SIGN SWITCH TESTED !!!!
                                     }
                                   }
                                   else{
