@@ -45,7 +45,7 @@ speedupFreezeRings = False
 
 # read equilibrated configuration file
 #pid, types, x, y, z, vx, vy, vz, Lx, Ly, Lz = espressopp.tools.readxyz("equilibrated_conf.xyz")
-pid, types, x, y, z, vx, vy, vz, Lx, Ly, Lz = espressopp.tools.readxyz("input_equi.xyz")
+pid, types, x, y, z, vx, vy, vz, Lx, Ly, Lz = espressopp.tools.readxyz("input.xyz")
 #pid, types, x, y, z, vx, vy, vz, Lx, Ly, Lz = espressopp.tools.readxyz("single_mol.xyz")
 
 # Make masses
@@ -65,10 +65,10 @@ tabHW_OW = "POTS/tableESP_HW_OW.dat"
 tabOW_OW = "POTS/tableESP_OW_OW.dat"
 
 # number of CG particles
-num_particlesAT = len(x)
+num_particlesCG = len(x)
 
 # number of AT particles
-num_particlesCG = len(x)/nTrotter
+num_particlesAT = len(x)*nTrotter
 
 # density, size
 density = num_particlesCG / (Lx * Ly * Lz)
@@ -100,25 +100,14 @@ allParticles = []
 tuples = []
 
 # prepare AT particles
-trot = 0
-for pidAT in range(num_particlesAT):
-    allParticlesAT.append([pidAT + 1, # add here these particles just temporarily
-                        Real3D(x[pidAT], y[pidAT], z[pidAT]), # position
-                        #Real3D(x[pidCG], y[pidCG], z[pidCG]), # position
-                        Real3D(vx[pidAT], vy[pidAT], vz[pidAT]), # velocity
-                        Real3D(0, 0, 0), # force
-                        trot%nTrotter + 1, types[pidAT], masses[pidAT], 1]) # pib, type, mass, is AT particle
-    trot +=1
-
-# prepare AT particles
-# for pidCG in range(num_particlesCG):
-    # for trot in range(nTrotter):
-        # allParticlesAT.append([pidCG*nTrotter + trot + 1, # add here these particles just temporarily
-                            # Real3D(x[pidCG]+ 0.01*(rand.random()-0.5), y[pidCG]+ 0.01*(rand.random()-0.5), z[pidCG]+ 0.01*(rand.random()-0.5)), # position
-                            # Real3D(x[pidCG], y[pidCG], z[pidCG]), # position
-                            # Real3D(0, 0, 0), # velocity
-                            # Real3D(0, 0, 0), # force
-                            # trot+1, types[pidAT], masses[pidAT], 1]) # pib, type, mass, is AT particle
+for pidCG in range(num_particlesCG):
+    for trot in range(nTrotter):
+        allParticlesAT.append([pidCG*nTrotter + trot + 1, # add here these particles just temporarily
+                            Real3D(x[pidCG]+ 0.01*(rand.random()-0.5), y[pidCG]+ 0.01*(rand.random()-0.5), z[pidCG]+ 0.01*(rand.random()-0.5)), # position
+                            #Real3D(x[pidCG], y[pidCG], z[pidCG]), # position
+                            Real3D(0, 0, 0), # velocity
+                            Real3D(0, 0, 0), # force
+                            trot+1, types[pidCG], masses[pidCG], 1]) # pib, type, mass, is AT particle
 
 # create CG particles
 for pidCG in range(num_particlesCG):
@@ -128,17 +117,16 @@ for pidCG in range(num_particlesCG):
     for pidAT2 in range(nTrotter):
         pid = pidCG*nTrotter+pidAT2
         tmptuple.append((allParticlesAT[pid])[0])
-    firstParticleId=tmptuple[1]
-    cmp=allParticlesAT[firstParticleId-1][1]
-    cmv=allParticlesAT[firstParticleId-1][2]
+    firsParticleId=tmptuple[1]
+    cmp=allParticlesAT[firsParticleId-1][1]
 
     #typeCG=max(types)+1
     # append CG particles
     allParticles.append([pidCG+num_particlesAT+1, # CG particle has to be added first!
                          Real3D(cmp[0], cmp[1], cmp[2]), # pos
-                         Real3D(cmv[0], cmv[1], cmv[2]), # vel
+                         Real3D(0, 0, 0), # vel
                          Real3D(0, 0, 0), # force
-                         0, types[pidCG*nTrotter], masses[pidCG*nTrotter], 0]) # pib, type, mass, is not AT particle
+                         0, types[pidCG], masses[pidCG], 0]) # pib, type, mass, is not AT particle
     # append AT particles
     for pidAT in range(nTrotter):
         pid = pidCG*nTrotter+pidAT
