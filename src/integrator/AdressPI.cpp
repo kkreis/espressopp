@@ -204,7 +204,7 @@ namespace espressopp {
                       real wDeriv = weightderivative(sqrt(min1sq));
                       vp.lambdaDeriv() = wDeriv;
                       
-                      vp.varmass() = vp.mass()*( 1.0*w+100.0*(1-w) );
+                      vp.varmass() = vp.mass()*( 1.0*w+100.0*(1.0-w) );
                   
                   }
                   
@@ -376,7 +376,7 @@ namespace espressopp {
                       real wDeriv = weightderivative(min1sq);
                       vp.lambdaDeriv() = wDeriv;
                       
-                      vp.varmass() = vp.mass()*( 1.0*w+100.0*(1-w) );
+                      vp.varmass() = vp.mass()*( 1.0*w+100.0*(1.0-w) );
                       // This loop is required when applying routines which use atomistic lambdas.
                       /*for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
