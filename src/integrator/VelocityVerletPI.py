@@ -109,6 +109,14 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
     def computeKineticEnergy(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.computeKineticEnergy(self)
+        
+    def computePositionDrift(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.computePositionDrift(self)
+        
+    def computeMomentumDrift(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.computeMomentumDrift(self)    
                 
     def addEigenvectors(self, evlist):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -124,6 +132,6 @@ if pmi.isController :
         pmiproxydefs = dict(
           cls =  'espressopp.integrator.VelocityVerletPILocal',
           pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'speedup', 'verletList' ],
-          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setSpeedup', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy'],
+          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setSpeedup', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeMomentumDrift', 'computePositionDrift'],
           pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getSpeedup', 'getVerletList' ]
         )

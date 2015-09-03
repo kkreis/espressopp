@@ -29,6 +29,7 @@ from espressopp.analysis.Pressure import *
 from espressopp.analysis.PressureTensor import *
 from espressopp.analysis.PressureTensorLayer import *
 from espressopp.analysis.PressureTensorMultiLayer import *
+from espressopp.analysis.ClassicalPressurePI import *
 from espressopp.analysis.Configurations import *
 from espressopp.analysis.ConfigurationsExt import *
 from espressopp.analysis.ConfigurationsExtAdress import *

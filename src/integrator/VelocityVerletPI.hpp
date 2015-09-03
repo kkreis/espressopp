@@ -132,7 +132,12 @@ namespace espressopp {
         
         // Compute special kinetic energy
         real computeKineticEnergy();
+
+        // Compute internal ring energies
+        real computePositionDrift();
         
+        // Compute special kinetic energy
+        real computeMomentumDrift();        
         
         // signal used for constraints
         //boost::signals2::signal0 <void> saveOldPos;

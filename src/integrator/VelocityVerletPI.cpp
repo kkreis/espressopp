@@ -1665,6 +1665,111 @@ namespace espressopp {
         return esumtotal;       
     }
     
+    
+    real VelocityVerletPI::computeMomentumDrift()
+    {
+        real esum = 0.0;
+
+        System& system = getSystemRef();
+        CellList realCells = system.storage->getRealCells();
+        shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
+        
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
+            
+            Particle &vp = *cit;
+            
+            FixedTupleListAdress::iterator it3;
+            it3 = fixedtupleList->find(&vp);
+            if (it3 != fixedtupleList->end()) {
+                std::vector<Particle*> atList;
+                atList = it3->second;
+
+                for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                       it2 != atList.end(); ++it2) {
+                    Particle &at = **it2;
+                                        
+                    if(at.pib() == 1){
+                        continue;
+                    }
+                    else if(at.pib() > 1 && at.pib() <= ntrotter){
+                        esum += 49.5*vp.mass()*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+                    }
+                    else{
+                         std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
+                         exit(1);
+                         return 0.0;
+                    }
+                    
+                }
+            
+            }
+            else { // this should not happen
+                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+                  std::cout << " (" << vp.position() << ")\n";
+                  exit(1);
+                  return 0.0;
+            }
+        }
+        
+        real esumtotal;
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());        
+        
+        return esumtotal;
+    }
+       
+
+    real VelocityVerletPI::computePositionDrift()
+    {
+        real esum = 0.0;
+
+        System& system = getSystemRef();
+        CellList realCells = system.storage->getRealCells();
+        shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
+        
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
+            
+            Particle &vp = *cit;
+            
+            FixedTupleListAdress::iterator it3;
+            it3 = fixedtupleList->find(&vp);
+            if (it3 != fixedtupleList->end()) {
+                std::vector<Particle*> atList;
+                atList = it3->second;
+
+                for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                       it2 != atList.end(); ++it2) {
+                    Particle &at = **it2;    
+                    
+                    if(at.pib() == 1){
+                        continue;
+                    }
+                    else if(at.pib() > 1 && at.pib() <= ntrotter){
+                        esum -= 49.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+                    }
+                    else{
+                         std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
+                         exit(1);
+                         return 0.0;
+                    }
+                    
+                }
+            
+            }
+            else { // this should not happen
+                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+                  std::cout << " (" << vp.position() << ")\n";
+                  exit(1);
+                  return 0.0;
+            }
+        }
+        
+        real esumtotal;
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());        
+        
+        return esumtotal;       
+    }         
+    
+    
     void VelocityVerletPI::setTimeStep(real _dt)
     {
       /*if (_mStep == 0) {
@@ -1888,6 +1993,8 @@ namespace espressopp {
         .def("transp", &VelocityVerletPI::transp)
         .def("computeKineticEnergy", &VelocityVerletPI::computeKineticEnergy)
         .def("computeRingEnergy", &VelocityVerletPI::computeRingEnergy)
+        .def("computeMomentumDrift", &VelocityVerletPI::computeMomentumDrift)
+        .def("computePositionDrift", &VelocityVerletPI::computePositionDrift)
         .add_property("mStep", &VelocityVerletPI::getmStep, &VelocityVerletPI::setmStep)
         .add_property("sStep", &VelocityVerletPI::getsStep, &VelocityVerletPI::setsStep)
         .add_property("ntrotter", &VelocityVerletPI::getNtrotter, &VelocityVerletPI::setNtrotter)
