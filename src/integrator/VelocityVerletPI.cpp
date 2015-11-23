@@ -65,6 +65,8 @@ namespace espressopp {
       speedup = false;
       sStep = 0;
       mStep = 0;
+      omega2 = 0.0;
+      clmassmultiplier = 100.0;
       
       UpdateCounter = 0;
       
@@ -327,7 +329,7 @@ namespace espressopp {
         
         if(i==0){ updateForces(3); }
         //updateForces(3);
-        integrateV1(3);        
+        integrateV1(3);
         
         // mstep loop
         for (int j = 0; j < mStep; j++){
@@ -378,7 +380,7 @@ namespace espressopp {
         }
         
         updateForces(3);
-        integrateV1(3); 
+        integrateV1(3);
         
         step++;
         
@@ -589,7 +591,8 @@ namespace espressopp {
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //real dtfm = half_dt / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        real dtfm = half_dt / (vp.varmass()*Eigenvalues.at(at.pib()-1));        
+                        //real dtfm = half_dt / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                    	real dtfm = half_dt / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
                         at.velocity() += dtfm * at.forcem();
                         //cout << "IntegrateV1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
                         //cout << "IntegrateV1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
@@ -645,8 +648,11 @@ namespace espressopp {
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));        
+                        //real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                    	real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        //cout << "at.forcem() I for bead " << at.pib() << ": " << at.forcem() << "\n\n";
                         at.velocity() += dtfm * at.forcem();
+                        //at.velocity() -= at.modepos()*omega2 * half_dt4;
                         //cout << "IntegrateV2 - 1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
                         //cout << "IntegrateV2 - 1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
                     }
@@ -705,13 +711,22 @@ namespace espressopp {
                         real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
                         //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
                         //mindriftforceX *= 0.5;
-                        mindriftforceX *= 49.5*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+                        //mindriftforceX *= 49.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+                        mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
 
                         //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
                         //mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
                         //vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
-                        Real3D driftforceadd(mindriftforceX,0.0,0.0);                                                                                            // X SPLIT VS SPHERE CHANGE
+                        Real3D driftforceadd(mindriftforceX,0.0,0.0);
+
+                        // DEBUG START
+                        //if ((vp.lambda() < 0.9999) && (vp.lambda() > 0.0001)){
+                        	//cout << "Momentum based drift force: " << mindriftforceX << "\n";
+                        //}
+                        // DEBUG END
+
+                        // X SPLIT VS SPHERE CHANGE
                         //Real3D driftforceadd(0.0,0.0,0.0);   
                         //vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
                         //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";                       
@@ -743,8 +758,11 @@ namespace espressopp {
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                        //real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                    	real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
                         at.velocity() += dtfm * at.forcem();
+                        //at.velocity() -= at.modepos()*omega2 * half_dt4;
+                        //cout << "at.forcem() II for bead " << at.pib() << ": " << at.forcem() << "\n\n";
                         //cout << "IntegrateV2 - 3, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
                         //cout << "IntegrateV2 - 3, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
                     }
@@ -842,7 +860,8 @@ namespace espressopp {
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
                         //at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter))))) * ranval;
-                        at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*Eigenvalues.at(at.pib()-1)))) * ranval;
+                        //at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*Eigenvalues.at(at.pib()-1)))) * ranval;
+                        at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1)))) * ranval;
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
@@ -963,7 +982,7 @@ namespace espressopp {
         real maxSqDist = 0.0;
         
         System& system = getSystemRef();
-        CellList localCells = system.storage->getRealCells(); //!!!!
+        CellList localCells = system.storage->getRealCells(); //!!!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -993,12 +1012,15 @@ namespace espressopp {
 
                           if(at.pib() <= ntrotter){
                               at.position()+= sqrt(ntrotter)*at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
+                              //at.position()+= at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
                               
                               // Update VP particle (this thing is executed too often... but this shouldn't matter, might be fixed later)
                               if((at2.pib() == 1) && (at.pib() == 1)){
                                   //vp.position() = at.position();
                                   //vp.velocity() = at.velocity();
+                            	  //cout << "vp.position()1: " << vp.position() << "\n";
                                   vp.position() = at2.modepos();
+                                  //cout << "vp.position()2: " << vp.position() << "\n";
                                   vp.velocity() = at2.velocity();
                               }
                           }
@@ -1068,7 +1090,7 @@ namespace espressopp {
         // Update mode positions based on real positions
         
         System& system = getSystemRef();
-        CellList localCells = system.storage->getRealCells(); //!!!!
+        CellList localCells = system.storage->getRealCells(); //!!!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -1091,7 +1113,14 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() <= ntrotter){
-                              at.modepos()+= sqrt(1.0/ntrotter)*at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);                             
+                              at.modepos()+= sqrt(1.0/ntrotter)*at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                              //at.modepos()+= at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                              // MODE DEBUG
+                              //cout << "Pib: " << at.pib() << ": " << Eigenvalues.at(at.pib()-1) << " and Eigenvector (component " << at2.pib()-1 << "): " << Eigenvectors.at(at.pib()-1).at(at2.pib()-1) << "\n";
+
+
+                              // MODE DEBUG
+
                           }
                           else{
                                std::cout << "at2.pib() outside of trotter range in transPos2 routine (VelocityVerletPI) \n";
@@ -1099,8 +1128,10 @@ namespace espressopp {
                                return;
                           }
 
-                    }        
-                    //cout << "transPos2(), at.position() for pib: " << at.pib() << ", ghost: " << vp.ghost() << ", position: " << at.position() <<  ", modepos: " << at.modepos() << ", velocity: " << at.velocity() << "\n";
+                    }
+
+
+                    //cout << "transPos2(), at.position() for pib: " << at.pib()  << ", position: " << at.position() <<  ", modepos: " << at.modepos() << "\n";
                   } 
             }
             else{
@@ -1120,7 +1151,7 @@ namespace espressopp {
         // Update mode forces based on real forces
         
         System& system = getSystemRef();
-        CellList localCells = system.storage->getRealCells(); //!!!!
+        CellList localCells = system.storage->getLocalCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -1193,7 +1224,7 @@ namespace espressopp {
       }
       
       // Signal // For FEC
-      aftCalcFslow();       
+      //aftCalcF();
     }
     
     
@@ -1219,7 +1250,10 @@ namespace espressopp {
             srIL[i]->addForces();
             //timeForceComp[i] += timeIntegrate.getElapsedTime() - time;
         }
-      }      
+      }
+
+      // Signal // For FEC
+      aftCalcF();
     }
         
     
@@ -1262,8 +1296,8 @@ namespace espressopp {
 
                                   if(at.pib() > 1 && at.pib() <= ntrotter){
                                     //at.forcem() -= at.modepos()*omega2*vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter));
-                                    at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues.at(at.pib()-1);
-                                    cout << "calcForcesF, at.forcem(): " << at.forcem() << " for at.modepos(): " << at.modepos() << "\n";
+                                    at.forcem() -= at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1);
+                                    //cout << "calcForcesF, at.forcem(): " << at.forcem() << " for at.modepos(): " << at.modepos() << "\n";
                                   }
                                   else if(at.pib() == 1){
                                     if(vp.lambda()<0.999999999 && vp.lambda()>0.000000001){                          
@@ -1274,7 +1308,9 @@ namespace espressopp {
                                             if(at2.pib() != 1){
                                                 //real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter));   
                                                 //xi += -49.5*omega2*at2.modepos().sqr()*chi;
-                                                xi += -49.5*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                                //xi += -49.5*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            	//xi += -49.5*ntrotter*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            	xi += -1.0*(clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
                                             }
                                         }
 
@@ -1348,8 +1384,15 @@ namespace espressopp {
 
                               if(at.pib() > 1 && at.pib() <= ntrotter){
                                 //at.forcem() -= at.modepos()*omega2*vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter));
-                                at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues.at(at.pib()-1);
-                                //std::cout << "Eigenvalue for " << at.pib() << " is: Eigenvalues.at(at.pib()-1): " << Eigenvalues.at(at.pib()-1) << "\n";
+                                at.forcem() -= at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1);
+
+                                //cout << "Ring forces: " << at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1) << "\n";
+                                //cout << "omega2: " << omega2 << "\n";
+                                //cout << "vp.varmass(): " << vp.varmass() << "\n";
+                                //cout << "at.modepos(): " << at.modepos() << "\n";
+                                //cout << "EV from python: " << Eigenvalues.at(at.pib()-1) << " EV analytical: " << 2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)) << "\n";
+                                //cout << "Eigenvalue for " << at.pib() << " is: Eigenvalues.at(at.pib()-1): " << Eigenvalues.at(at.pib()-1) << "\n";
+                                //cout << "at.forcem() for bead " << at.pib() << ": " << at.forcem() << "\n\n";
                               }
                               else if(at.pib() == 1){
                                 if(vp.lambda()<0.999999999 && vp.lambda()>0.000000001){                          
@@ -1392,8 +1435,9 @@ namespace espressopp {
                                     real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
                                     //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
                                     //mindriftforceX *= 0.5;
-                                    mindriftforceX *= -49.5*vp.mass()*omega2*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
-
+                                    //mindriftforceX *= -49.5*vp.mass()*omega2*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+                                    //mindriftforceX *= -49.5*ntrotter*vp.mass()*omega2*xi*vp.lambdaDeriv();
+                                    mindriftforceX *= -1.0*(clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*omega2*xi*vp.lambdaDeriv();
                                     //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
                                     //mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
@@ -1403,6 +1447,11 @@ namespace espressopp {
                                     //vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
                                     //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
 
+                                    // DEBUG START
+                                    //if ((vp.lambda() < 0.9999) && (vp.lambda() > 0.0001)){
+                                    	//cout << "Position based drift force: " << mindriftforceX << "\n";
+                                    //}
+                                    // DEBUG END
 
                                     at.forcem() -= driftforceadd;
                                 }
@@ -1445,11 +1494,13 @@ namespace espressopp {
       //real time;
       storage::Storage& storage = *getSystemRef().storage;
       //time = timeIntegrate.getElapsedTime();
-      { 
+      if (f==2 || f==3){
         //VT_TRACER("commF");
         storage.updateGhosts();
+        // signal
         //transPos2();
       }
+      recalc2();
       //timeComm1 += timeIntegrate.getElapsedTime() - time;
       //time = timeIntegrate.getElapsedTime();
       
@@ -1471,9 +1522,9 @@ namespace espressopp {
       //calcForces();
       //timeForce += timeIntegrate.getElapsedTime() - time;
       //time = timeIntegrate.getElapsedTime();
-      {
+      if (f==2 || f==3){
         //VT_TRACER("commR");
-        storage.collectGhostForces();
+        storage.collectGhostForces();   // NOT FOR INTERNAL RING FORCES!
       }
       //timeComm2 += timeIntegrate.getElapsedTime() - time;
 
@@ -1481,8 +1532,9 @@ namespace espressopp {
       //aftCalcF();
       
       if (f==2 || f==3){
+    	//storage.collectGhostForces();
         // signal 
-        aftCalcF();
+        aftCalcFPI();
         transForces();
       }
     }
@@ -1581,7 +1633,8 @@ namespace espressopp {
                             continue;
                         }else{
                             //esum += at.velocity().sqr() * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                            esum += at.velocity().sqr() * (vp.varmass()*Eigenvalues.at(at.pib()-1));        
+                        	//esum += at.velocity().sqr() * (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                            esum += at.velocity().sqr() * (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
                         }
                     }
                     else{
@@ -1601,14 +1654,14 @@ namespace espressopp {
             }
         }
         esum *= 0.5;
-        
+
         real esumtotal;
-        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());        
-        
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());
+
         return esumtotal;
     }
-    
-    
+
+
     real VelocityVerletPI::computeRingEnergy()
     {
         real esum = 0.0;
@@ -1616,11 +1669,11 @@ namespace espressopp {
         System& system = getSystemRef();
         CellList realCells = system.storage->getRealCells();
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
-        
-        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
-            
+
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+
             Particle &vp = *cit;
-            
+
             FixedTupleListAdress::iterator it3;
             it3 = fixedtupleList->find(&vp);
             if (it3 != fixedtupleList->end()) {
@@ -1630,25 +1683,26 @@ namespace espressopp {
                 for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
                     Particle &at = **it2;
-                    
+
                     //esum += at.velocity().sqr() * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                    //esum += at.velocity().sqr() * (vp.varmass()*Eigenvalues.at(at.pib()-1));        
-                    
+                    //esum += at.velocity().sqr() * (vp.varmass()*Eigenvalues.at(at.pib()-1));
+
                     if(at.pib() == 1){
                         continue;
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //esum += at.modepos().sqr() * omega2 * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        esum += at.modepos().sqr() * omega2 * (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                        esum += at.modepos().sqr() * omega2 * ntrotter *  (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                        //cout << "Ring Energy: vp.varmass(): " << vp.varmass() << "\n";
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
                          exit(1);
                          return 0.0;
                     }
-                    
+
                 }
-            
+
             }
             else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -1658,14 +1712,91 @@ namespace espressopp {
             }
         }
         esum *= 0.5;
-        
+
         real esumtotal;
-        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());        
-        
-        return esumtotal;       
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());
+
+        return esumtotal;
     }
-    
-    
+
+    real VelocityVerletPI::computeRingEnergyRaw()
+    {
+        real esum = 0.0;
+
+        System& system = getSystemRef();
+        CellList realCells = system.storage->getRealCells();
+        shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
+
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+
+            Particle &vp = *cit;
+
+            FixedTupleListAdress::iterator it3;
+            it3 = fixedtupleList->find(&vp);
+            if (it3 != fixedtupleList->end()) {
+                std::vector<Particle*> atList;
+                atList = it3->second;
+
+            	Real3D pos1(0.0,0.0,0.0);
+            	Real3D posN(0.0,0.0,0.0);
+
+                for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                       it2 != atList.end(); ++it2) {
+                    Particle &at = **it2;
+
+                    //esum += at.velocity().sqr() * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+                    //esum += at.velocity().sqr() * (vp.varmass()*Eigenvalues.at(at.pib()-1));
+
+                    if(at.pib() == 1){
+                    	pos1 = at.position();
+                    	posN = at.position();
+                        //continue;
+                    }
+                    else if(at.pib() > 1 && at.pib() <= ntrotter-1){
+                        //esum += at.modepos().sqr() * omega2 * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+
+                        esum += (at.position()-posN).sqr() * omega2 * vp.varmass();
+                        //cout << (at.position()-posN).sqr() * omega2 * vp.varmass() << "\n";
+                        //cout << "computeRingEnergyRaw, at.position() for pib: " << at.pib()  << ", position: " << at.position() <<  ", posN: " << posN << "\n";
+                        posN = at.position();
+                    }
+                    else if(at.pib() == ntrotter){
+                        //esum += at.modepos().sqr() * omega2 * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+
+                        esum += (at.position()-posN).sqr() * omega2 * vp.varmass();
+                        //cout << (at.position()-posN).sqr() * omega2 * vp.varmass() << "\n";
+                        esum += (at.position()-pos1).sqr() * omega2 * vp.varmass();
+
+                        //cout << "computeRingEnergyRaw, at.position() for pib: " << at.pib()  << ", position: " << at.position() <<  ", posN: " << posN << "\n";
+                        //cout << "computeRingEnergyRaw, at.position() for pib: " << at.pib()  << ", position: " << at.position() <<  ", posN: " << pos1 << "\n";
+                        //cout << (at.position()-pos1).sqr() * omega2 * vp.varmass() << "\n\n";
+                        //Real3D posN = at.position();
+                    }
+                    else{
+                         std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
+                         exit(1);
+                         return 0.0;
+                    }
+
+                }
+
+            }
+            else { // this should not happen
+                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+                  std::cout << " (" << vp.position() << ")\n";
+                  exit(1);
+                  return 0.0;
+            }
+        }
+        esum *= 0.5;
+
+        real esumtotal;
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());
+
+        return esumtotal;
+    }
+
+
     real VelocityVerletPI::computeMomentumDrift()
     {
         real esum = 0.0;
@@ -1673,11 +1804,11 @@ namespace espressopp {
         System& system = getSystemRef();
         CellList realCells = system.storage->getRealCells();
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
-        
-        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
-            
+
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+
             Particle &vp = *cit;
-            
+
             FixedTupleListAdress::iterator it3;
             it3 = fixedtupleList->find(&vp);
             if (it3 != fixedtupleList->end()) {
@@ -1687,21 +1818,23 @@ namespace espressopp {
                 for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
                     Particle &at = **it2;
-                                        
+
                     if(at.pib() == 1){
                         continue;
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        esum += 49.5*vp.mass()*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+                        //esum += 49.5*vp.mass()*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+                    	//esum += 49.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+                    	esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
                          exit(1);
                          return 0.0;
                     }
-                    
+
                 }
-            
+
             }
             else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -1710,13 +1843,13 @@ namespace espressopp {
                   return 0.0;
             }
         }
-        
+
         real esumtotal;
-        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());        
-        
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());
+
         return esumtotal;
     }
-       
+
 
     real VelocityVerletPI::computePositionDrift()
     {
@@ -1725,11 +1858,11 @@ namespace espressopp {
         System& system = getSystemRef();
         CellList realCells = system.storage->getRealCells();
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
-        
-        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) { 
-            
+
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+
             Particle &vp = *cit;
-            
+
             FixedTupleListAdress::iterator it3;
             it3 = fixedtupleList->find(&vp);
             if (it3 != fixedtupleList->end()) {
@@ -1738,22 +1871,27 @@ namespace espressopp {
 
                 for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;    
-                    
+                    Particle &at = **it2;
+
                     if(at.pib() == 1){
                         continue;
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        esum -= 49.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+                        //esum -= 49.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+                    	//esum -= 49.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+                    	esum -= (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+//                    	cout << "Pos. Drift: vp.mass(): " << 49.5*vp.mass() << "\n";
+//                    	cout << "Pos. Drift: " << 49.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1) << "\n";
+//                    	cout << "Ring Energy: " << at.modepos().sqr() * omega2 * ntrotter *  (vp.varmass()*Eigenvalues.at(at.pib()-1)) << "\n";
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
                          exit(1);
                          return 0.0;
                     }
-                    
+
                 }
-            
+
             }
             else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -1762,14 +1900,14 @@ namespace espressopp {
                   return 0.0;
             }
         }
-        
+
         real esumtotal;
-        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());        
-        
-        return esumtotal;       
-    }         
-    
-    
+        boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());
+
+        return esumtotal;
+    }
+
+
     void VelocityVerletPI::setTimeStep(real _dt)
     {
       /*if (_mStep == 0) {
@@ -1784,7 +1922,7 @@ namespace espressopp {
       dt2 = dt*sStep;
       dt3 = dt*mStep*sStep;
     }
-    
+
     void VelocityVerletPI::setmStep(int _mStep)
     {
       if (_mStep == 0) {
@@ -1797,7 +1935,7 @@ namespace espressopp {
 
       mStep = _mStep;
     }
-    
+
     void VelocityVerletPI::setsStep(int _sStep)
     {
       if (_sStep == 0) {
@@ -1810,7 +1948,7 @@ namespace espressopp {
 
       sStep = _sStep;
     }
-    
+
     void VelocityVerletPI::setNtrotter(int _ntrotter)
     {
       if (_ntrotter == 0) {
@@ -1823,7 +1961,7 @@ namespace espressopp {
 
       ntrotter = _ntrotter;
     }
-    
+
     void VelocityVerletPI::setSpeedup(bool _speedup)
     {
       /*if (_ntrotter == 0) {
@@ -1836,7 +1974,7 @@ namespace espressopp {
 
       speedup = _speedup;
     }
-    
+
     void VelocityVerletPI::setTemperature(real _temperature)
     {
       if (_temperature < 0.0) {
@@ -1853,7 +1991,7 @@ namespace espressopp {
       //omega2 = ntrotter*temperature*temperature*kb*kb*Nav*1.66053892*pow(10.,-48)/(hbar*hbar*0.00831451*0.00831451);
       omega2 = ntrotter*temperature*temperature*kb*kb*Nav*1.66053892/(hbar*hbar*0.00831451*0.00831451*1000.0);
     }
-    
+
     void VelocityVerletPI::setGamma(real _gamma)
     {
       if (_gamma < 0.0) {
@@ -1866,7 +2004,20 @@ namespace espressopp {
 
       gamma = _gamma;
     }
-    
+
+    void VelocityVerletPI::setClmassmultiplier(real _clmassmultiplier)
+    {
+      if (_clmassmultiplier < 1.0) {
+        System& system = getSystemRef();
+        esutil::Error err(system.comm);
+        std::stringstream msg;
+        msg << "clmassmultiplier must be larger or equal one!";
+        err.setException(msg.str());
+      }
+
+      clmassmultiplier = _clmassmultiplier;
+    }
+
     void VelocityVerletPI::setVerletList(shared_ptr<VerletListAdress> _verletList)
     {
       if (!_verletList) {
@@ -1879,7 +2030,7 @@ namespace espressopp {
 
       verletList = _verletList;
     }
-    
+
     void VelocityVerletPI::transp()
     {
         //cout << "YAY!!!\n";
@@ -1889,27 +2040,27 @@ namespace espressopp {
             exit(1);
             return;
         }
-        
+
         std::vector<real> tmpvec;
-        
+
         for (size_t i = 0; i < ntrotter; ++i)
-        { 
+        {
             for (size_t j = 0; j < ntrotter; ++j)
             {
                 tmpvec.push_back( Tvectors.at(j).at(i) );
             }
-            
+
             Eigenvectors.push_back(tmpvec);
             tmpvec.clear();
         }
     }
-    
-    
+
+
     /*void VelocityVerletPI::addEV(tuple vals) {
         //bool returnVal = true;
-        
+
         Eigenvectors.push_back(vals);
-        
+
         System& system = storage->getSystemRef();
         esutil::Error err(system.comm);
 
@@ -1945,7 +2096,7 @@ namespace espressopp {
           }
         }
         err.checkException();
-        
+
         if(returnVal){
             this->add(vp, tmp); // add to TupleList
 
@@ -1962,7 +2113,7 @@ namespace espressopp {
 
         return returnVal;
     }*/
-    
+
 
     /****************************************************
     ** REGISTRATION WITH PYTHON
@@ -1983,6 +2134,7 @@ namespace espressopp {
         .def("setNtrotter", &VelocityVerletPI::setNtrotter)
         .def("setTemperature", &VelocityVerletPI::setTemperature)
         .def("setGamma", &VelocityVerletPI::setGamma)
+		.def("setClmassmultiplier", &VelocityVerletPI::setClmassmultiplier)
         .def("setSpeedup", &VelocityVerletPI::setSpeedup)
         //.def("addEigenvectors", &VelocityVerletPI::setNtrotter)
         .def("setVerletList", &VelocityVerletPI::setVerletList)
@@ -1993,6 +2145,7 @@ namespace espressopp {
         .def("transp", &VelocityVerletPI::transp)
         .def("computeKineticEnergy", &VelocityVerletPI::computeKineticEnergy)
         .def("computeRingEnergy", &VelocityVerletPI::computeRingEnergy)
+		.def("computeRingEnergyRaw", &VelocityVerletPI::computeRingEnergyRaw)
         .def("computeMomentumDrift", &VelocityVerletPI::computeMomentumDrift)
         .def("computePositionDrift", &VelocityVerletPI::computePositionDrift)
         .add_property("mStep", &VelocityVerletPI::getmStep, &VelocityVerletPI::setmStep)

@@ -287,6 +287,11 @@ namespace espressopp {
                        force *= 1.0/ntrotter;
                        p3.force() += force;
                        p4.force() -= force;
+
+                       // DEBUG START
+                       //std::cout << "Bonded force: " << force << "\n";
+                       // DEBUG END
+
                        //std::cout << "FixedPair real force per bead: " << force <<"\n";
                        
                        LOG4ESPP_DEBUG(_Potential::theLogger, "p" << p1.id() << "(" << p1.position()[0] << "," << p1.position()[1] << "," << p1.position()[2] << ") "
@@ -574,32 +579,226 @@ namespace espressopp {
     template < typename _Potential > inline real
     FixedPairListPIadressInteractionTemplate < _Potential >::
     computeVirial() {
-      LOG4ESPP_INFO(theLogger, "compute the virial for the FixedPair List");
-      std::cout << "Warning! At the moment computeVirial() in FixedPairListPIadressInteractionTemplate does not work." << std::endl;
-      exit(1);
-      return 0.0;
-      
-      /*real w = 0.0;
-      const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
-      for (FixedPairList::PairList::Iterator it(*fixedpairList);
-           it.isValid(); ++it) {                                         
-        const Particle &p1 = *it->first;                                       
-        const Particle &p2 = *it->second;                                      
+//      LOG4ESPP_INFO(theLogger, "compute the virial for the FixedPair List");
+//      std::cout << "Warning! At the moment computeVirial() in FixedPairListPIadressInteractionTemplate does not work." << std::endl;
+//      exit(1);
+//      return 0.0;
 
-        Real3D r21;
-        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
-        Real3D force;
-        if(potential->_computeForce(force, r21)) {
-          w += r21 * force;
-        }
-      }
+    	real w = 0.0;
+
+    	const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+    	      real ltMaxBondSqr = fixedpairList->getLongtimeMaxBondSqr();
+    	      for (FixedPairList::PairList::Iterator it(*fixedpairList); it.isValid(); ++it) {
+    	        Particle &p1 = *it->first;
+    	        Particle &p2 = *it->second;
+
+    	        //weights
+    	        real w1 = p1.lambda();
+    	        real w2 = p2.lambda();
+
+    	        // Completely in classical region?
+    	        if ( (w1 < 0.000000001) && (w2 < 0.000000001) ) {
+
+    	            if(speedup == true){
+    	                Real3D dist;
+    	                bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
+    	                Real3D force;
+//  	                real d = dist.sqr();
+//    	                if (d > ltMaxBondSqr) {
+//    	                        fixedpairList->setLongtimeMaxBondSqr(d);
+//    	                        ltMaxBondSqr = d;
+//    	                }
+    	                if(potential->_computeForce(force, dist)) {
+    	                  //p1.force() += force;
+    	                  //p2.force() -= force;
+//    	              	  /Real3D r21(0.0, 0.0, 0.0);
+    	              	  //bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+    	              	  //Real3D dist = p1.position() - p2.position();
+    	              	  w += dist * force;
+    	                  LOG4ESPP_DEBUG(_Potential::theLogger, "p" << p1.id() << "(" << p1.position()[0] << "," << p1.position()[1] << "," << p1.position()[2] << ") "
+    	                                                             << "p" << p2.id() << "(" << p2.position()[0] << "," << p2.position()[1] << "," << p2.position()[2] << ") "
+    	                                                             << "dist=" << sqrt(dist*dist) << " "
+    	                                                             << "force=(" << force[0] << "," << force[1] << "," << force[2] << ")" );
+    	                }
+    	            }
+    	            else{
+    	                // Get the corresponding tuples
+    	                FixedTupleListAdress::iterator it3;
+    	                FixedTupleListAdress::iterator it4;
+    	                it3 = fixedtupleList->find(&p1);
+    	                it4 = fixedtupleList->find(&p2);
+
+    	                if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+    	                    // Get the PI bead lists (i.e. the AdResS particles)
+    	                    std::vector<Particle*> atList1;
+    	                    std::vector<Particle*> atList2;
+    	                    atList1 = it3->second;
+    	                    atList2 = it4->second;
+
+    	                    // Iterate the two iterators in a parallel fashion
+    	                    std::vector<Particle*>::iterator itv2 = atList2.begin();
+    	                    for (std::vector<Particle*>::iterator itv = atList1.begin();
+    	                         itv != atList1.end(); ++itv) {
+
+    	                         // they should be the same length... Total Trotter beads the same everywhere in the system
+    	                         if (itv2 == atList2.end()){
+    	                             std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+    	                             p1.id() << "\n";
+    	                             exit(1);
+    	                             return 0.0;
+    	                         }
+
+    	                         // Get the individual PI beads
+    	                         Particle &p3 = **itv;
+    	                         Particle &p4 = **itv2;
+
+    	                         // the beads we get should have the same Trotter bead number to interact with each other
+    	                         if (p3.pib() != p4.pib()){
+    	                             std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+    	                             p3.id() << " and " << p4.id() << "\n";
+    	                             exit(1);
+    	                             return 0.0;
+    	                         }
+
+    	                         // Calculate forces
+    	                         Real3D dist;
+    	                         bc.getMinimumImageVectorBox(dist, p3.position(), p4.position());
+    	                         Real3D force;
+//    	                         real d = dist.sqr();
+//    	                         if (d > ltMaxBondSqr) {
+//    	                                fixedpairList->setLongtimeMaxBondSqr(d);
+//    	                                ltMaxBondSqr = d;
+//    	                         }
+    	                         if(potential->_computeForce(force, dist)) {
+    	                           force *= 1.0/ntrotter;
+    	                           //p3.force() += force;
+    	                           //p4.force() -= force;
+    	                           w += dist * force;
+    	                           LOG4ESPP_DEBUG(_Potential::theLogger, "p" << p1.id() << "(" << p1.position()[0] << "," << p1.position()[1] << "," << p1.position()[2] << ") "
+    	                                                                     << "p" << p2.id() << "(" << p2.position()[0] << "," << p2.position()[1] << "," << p2.position()[2] << ") "
+    	                                                                     << "dist=" << sqrt(dist*dist) << " "
+    	                                                                     << "force=(" << force[0] << "," << force[1] << "," << force[2] << ")" );
+    	                         }
+
+    	                         //Iterate the second iterator
+    	                         ++itv2;
+
+    	                    }
+    	                }
+    	                else { // this should not happen
+    	                   std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+    	                         p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+    	                   std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+    	                   exit(1);
+    	                   return 0.0;
+    	                }
+    	            }
+    	        }
+    	        // Otherwise...
+    	        else{
+    	            // Get the corresponding tuples
+    	            FixedTupleListAdress::iterator it3;
+    	            FixedTupleListAdress::iterator it4;
+    	            it3 = fixedtupleList->find(&p1);
+    	            it4 = fixedtupleList->find(&p2);
+
+    	            if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+    	                // Get the PI bead lists (i.e. the AdResS particles)
+    	                std::vector<Particle*> atList1;
+    	                std::vector<Particle*> atList2;
+    	                atList1 = it3->second;
+    	                atList2 = it4->second;
+
+    	                // Iterate the two iterators in a parallel fashion
+    	                std::vector<Particle*>::iterator itv2 = atList2.begin();
+    	                for (std::vector<Particle*>::iterator itv = atList1.begin();
+    	                     itv != atList1.end(); ++itv) {
+
+    	                     // they should be the same length... Total Trotter beads the same everywhere in the system
+    	                     if (itv2 == atList2.end()){
+    	                         std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+    	                         p1.id() << "\n";
+    	                         exit(1);
+    	                         return 0.0;
+    	                     }
+
+    	                     // Get the individual PI beads
+    	                     Particle &p3 = **itv;
+    	                     Particle &p4 = **itv2;
+
+    	                     // the beads we get should have the same Trotter bead number to interact with each other
+    	                     if (p3.pib() != p4.pib()){
+    	                         std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+    	                         p3.id() << " and " << p4.id() << "\n";
+    	                         exit(1);
+    	                         return 0.0;
+    	                     }
+
+    	                     // Calculate forces
+    	                     Real3D dist;
+    	                     bc.getMinimumImageVectorBox(dist, p3.position(), p4.position());
+    	                     Real3D force;
+//    	                     real d = dist.sqr();
+//    	                     if (d > ltMaxBondSqr) {
+//    	                            fixedpairList->setLongtimeMaxBondSqr(d);
+//    	                            ltMaxBondSqr = d;
+//    	                     }
+    	                     if(potential->_computeForce(force, dist)) {
+    	                       force *= 1.0/ntrotter;
+    	                       //p3.force() += force;
+    	                       //p4.force() -= force;
+    	                       //std::cout << "FixedPair real force per bead: " << force <<"\n";
+    	                       w += dist * force;
+
+    	                       LOG4ESPP_DEBUG(_Potential::theLogger, "p" << p1.id() << "(" << p1.position()[0] << "," << p1.position()[1] << "," << p1.position()[2] << ") "
+    	                                                                 << "p" << p2.id() << "(" << p2.position()[0] << "," << p2.position()[1] << "," << p2.position()[2] << ") "
+    	                                                                 << "dist=" << sqrt(dist*dist) << " "
+    	                                                                 << "force=(" << force[0] << "," << force[1] << "," << force[2] << ")" );
+    	                     }
+
+    	                     //Iterate the second iterator
+    	                     ++itv2;
+
+    	                }
+    	            }
+    	            else { // this should not happen
+    	               std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+    	                     p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+    	               std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+    	               exit(1);
+    	               return 0.0;
+    	            }
+
+    	        }
+
+    	      }
+
+
+
+      
+//      real w = 0.0;
+//      const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
+//      for (FixedPairList::PairList::Iterator it(*fixedpairList);
+//           it.isValid(); ++it) {
+//        const Particle &p1 = *it->first;
+//        const Particle &p2 = *it->second;
+//
+//        Real3D r21;
+//        bc.getMinimumImageVectorBox(r21, p1.position(), p2.position());
+//        Real3D force;
+//        if(potential->_computeForce(force, r21)) {
+//          w += r21 * force;
+//        }
+//      }
       
       real wsum;
       boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
-      return wsum;*/
+      return wsum;
     }
 
-    template < typename _Potential > inline void
+   template < typename _Potential > inline void
     FixedPairListPIadressInteractionTemplate < _Potential >::computeVirialTensor(Tensor& w){
       LOG4ESPP_INFO(theLogger, "compute the virial tensor for the FixedPair List");
       std::cout << "Warning! At the moment computeVirialTensor() in FixedPairListPIadressInteractionTemplate does not work." << std::endl;

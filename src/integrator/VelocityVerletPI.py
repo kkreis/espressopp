@@ -65,21 +65,29 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getNtrotter(self)
         
-    def setTemperature(self, int):
+    def setTemperature(self, real):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.setTemperature(self, int)
+            self.cxxclass.setTemperature(self, real)
 
     def getTemperature(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getTemperature(self)
         
-    def setGamma(self, int):
+    def setGamma(self, real):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            self.cxxclass.setGamma(self, int)
+            self.cxxclass.setGamma(self, real)
 
     def getGamma(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getGamma(self)
+        
+    def setClmassmultiplier(self, real):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setClmassmultiplier(self, real)
+
+    def getClmassmultiplier(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getClmassmultiplier(self)
         
     def setSpeedup(self, bool):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -106,6 +114,10 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.computeRingEnergy(self)
         
+    def computeRingEnergyRaw(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.computeRingEnergyRaw(self)
+        
     def computeKineticEnergy(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.computeKineticEnergy(self)
@@ -131,7 +143,7 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
           cls =  'espressopp.integrator.VelocityVerletPILocal',
-          pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'speedup', 'verletList' ],
-          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setSpeedup', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeMomentumDrift', 'computePositionDrift'],
-          pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getSpeedup', 'getVerletList' ]
+          pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'clmassmultiplier', 'speedup', 'verletList' ],
+          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setClmassmultiplier', 'setSpeedup', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeRingEnergyRaw', 'computeMomentumDrift', 'computePositionDrift'],
+          pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getClmassmultiplier', 'getSpeedup', 'getVerletList' ]
         )

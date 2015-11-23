@@ -117,6 +117,11 @@ namespace espressopp {
         /** Getter routine for gamma. */
         real getGamma() { return gamma; }
         
+        /** Setter routine for gamma. */
+        void setClmassmultiplier(real _clmassmultiplier);
+        /** Getter routine for gamma. */
+        real getClmassmultiplier() { return clmassmultiplier; }
+
         /** Setter routine for speedup. */
         void setSpeedup(bool _speedup);
         /** Getter routine for speedup. */
@@ -129,6 +134,7 @@ namespace espressopp {
         
         // Compute internal ring energies
         real computeRingEnergy();
+        real computeRingEnergyRaw();
         
         // Compute special kinetic energy
         real computeKineticEnergy();
@@ -180,6 +186,7 @@ namespace espressopp {
         int UpdateCounter; // JUST FOR CHECKING AND DEBUGGING
                 
         real omega2;
+        real clmassmultiplier;
         
         real gamma;
         real temperature;

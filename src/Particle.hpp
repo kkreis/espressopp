@@ -211,7 +211,7 @@ namespace espressopp {
       l.ghost        = false;
       p.lambda       = 0.0;
       p.varmass       = 0.0;
-      p.drift        = 0.0;      
+      p.drift        = 0.0;
       p.lambdaDeriv  = 0.0;
       r.extVar       = 0.0;      
       p.state        = 0;

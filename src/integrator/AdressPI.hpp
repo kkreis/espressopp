@@ -48,6 +48,7 @@ namespace espressopp {
         shared_ptr<FixedTupleListAdress> fixedtupleList;
         int ntrotter;
         bool KTI;
+        real clmassmultiplier;
         
         
         real dhy;
@@ -56,8 +57,7 @@ namespace espressopp {
         real dex2;
         real dexdhy;
         real dexdhy2;
-        
-        AdressPI(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, bool _KTI = false);
+        AdressPI(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, real clmassmultiplier = 100.0, bool _KTI = false);
 
         ~AdressPI();
         
@@ -69,7 +69,8 @@ namespace espressopp {
         boost::signals2::connection _SetPosVel, _initForces, _setweights, /*_inIntP, _integrate2, _recalc2, _befIntV;*/  _aftCalcF;
         
         //void integrate1(real&);
-        void setweights(real&);
+        void setweights();
+        //void setweights(real&);
         void initForces();
         void SetPosVel();
         //void integrate2();

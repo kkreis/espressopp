@@ -53,10 +53,10 @@ from _espressopp import integrator_AdressPI
 class AdressPILocal(ExtensionLocal, integrator_AdressPI):
     'The (local) AdResSPI'
 
-    def __init__(self, _system, _verletlist, _fixedtuplelist, _ntrotter, KTI = False):
+    def __init__(self, _system, _verletlist, _fixedtuplelist, _ntrotter, clmassmultiplier = 100.0, KTI = False):
         'Local construction of a verlet list for AdResSPI'
         if pmi.workerIsActive():
-            cxxinit(self, integrator_AdressPI, _system, _verletlist, _fixedtuplelist, _ntrotter, KTI)
+            cxxinit(self, integrator_AdressPI, _system, _verletlist, _fixedtuplelist, _ntrotter, clmassmultiplier, KTI)
 
 if pmi.isController:
     class AdressPI(Extension):

@@ -40,8 +40,8 @@ namespace espressopp {
 
     using namespace espressopp::iterator;
 
-    AdressPI::AdressPI(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, bool _KTI /*= false*/)
-        : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter), KTI(_KTI){
+    AdressPI::AdressPI(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, real _clmassmultiplier, bool _KTI /*= false*/)
+        : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter), clmassmultiplier(_clmassmultiplier), KTI(_KTI){
         LOG4ESPP_INFO(theLogger, "construct AdressPI");
         type = Extension::Adress;
         
@@ -84,8 +84,12 @@ namespace espressopp {
                 boost::bind(&AdressPI::initForces, this), boost::signals2::at_front);
 
         // connection to inside of integrate1()
-        _setweights = integrator->inIntP.connect(
-                boost::bind(&AdressPI::setweights, this, _1), boost::signals2::at_front);
+        //_setweights = integrator->inIntP.connect(
+                //boost::bind(&AdressPI::setweights, this, _1), boost::signals2::at_front);
+
+        // connection to inside of integrate1()
+        _setweights = integrator->recalc2.connect(
+                boost::bind(&AdressPI::setweights, this), boost::signals2::at_front);
 
         // connection to inside of integrate1()
         //_inIntP = integrator->inIntP.connect(
@@ -98,7 +102,7 @@ namespace espressopp {
         // Note: Both this extension as well as Langevin Thermostat access singal aftCalcF. This might lead to undefined behavior.
         // Therefore, we use other signals here, to make sure the Thermostat would be always called first, before force distributions take place.
         // connection to after _aftCalcF()
-        _aftCalcF = integrator->aftCalcF.connect(
+        _aftCalcF = integrator->aftCalcFPI.connect(
                 boost::bind(&AdressPI::aftCalcF, this), boost::signals2::at_back);        
         
         // connection to after _recalc2()
@@ -126,7 +130,7 @@ namespace espressopp {
 
               if (it3 != fixedtupleList->end()) {
 
-                  std::vector<Particle*> atList;
+                  /*std::vector<Particle*> atList;
                   atList = it3->second;
 
                   // Compute center of mass
@@ -158,7 +162,7 @@ namespace espressopp {
 
                   // update (overwrite) the position and velocity of the VP
                   vp.position() = cmp;
-                  vp.velocity() = cmv;
+                  vp.velocity() = cmv;*/
 
                   if (KTI == false) {
                       // calculate distance to nearest adress particle or center
@@ -258,7 +262,8 @@ namespace espressopp {
 
 
     //void AdressPI::integrate1(real& maxSqDist){
-    void AdressPI::setweights(real& maxSqDist){
+    //void AdressPI::setweights(real& maxSqDist){
+    void AdressPI::setweights(){
 
         System& system = getSystemRef();
         /*real dt = integrator->getTimeStep();
@@ -376,7 +381,7 @@ namespace espressopp {
                       real wDeriv = weightderivative(min1sq);
                       vp.lambdaDeriv() = wDeriv;
                       
-                      vp.varmass() = vp.mass()*( 1.0*w+100.0*(1.0-w) );
+                      vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
                       // This loop is required when applying routines which use atomistic lambdas.
                       /*for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
@@ -514,7 +519,7 @@ namespace espressopp {
         else{
             real argument = sqrt(distanceSqr) - dex;
             //return -(30.0/(pow(dhy, 5.0)))*(pow(argument, 4.0)-2.0*dhy*pow(argument, 3.0)+argument*argument*dhy*dhy);
-            return -pidhy2 * 2.0 * cos(pidhy2*argument) * sin(pidhy2*argument); // for cosine squared weighting function
+            return -1.0 * pidhy2 * 2.0 * cos(pidhy2*argument) * sin(pidhy2*argument); // for cosine squared weighting function
         }
     }
     // AdResS PI variable mass function
@@ -613,7 +618,7 @@ namespace espressopp {
       using namespace espressopp::python;
 
       class_<AdressPI, shared_ptr<AdressPI>, bases<Extension> >
-        ("integrator_AdressPI", init<shared_ptr<System>, shared_ptr<VerletListAdress>, shared_ptr<FixedTupleListAdress>, int, bool >())
+        ("integrator_AdressPI", init<shared_ptr<System>, shared_ptr<VerletListAdress>, shared_ptr<FixedTupleListAdress>, int, real, bool >())
         .def("connect", &AdressPI::connect)
         .def("disconnect", &AdressPI::disconnect)
         ;

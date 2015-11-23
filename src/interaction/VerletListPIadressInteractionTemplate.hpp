@@ -168,8 +168,8 @@ namespace espressopp {
       LOG4ESPP_INFO(theLogger, "add forces computed by the Verlet List");
  
       // Get the cg and the adrZones
-      std::set<Particle*> cgZone = verletList->getCGZone();
-      std::set<Particle*> adrZone = verletList->getAdrZone();
+      //std::set<Particle*> cgZone = verletList->getCGZone();
+      //std::set<Particle*> adrZone = verletList->getAdrZone();
 
       // Initialize the energy diff map to zero 
       // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to set to zero...
@@ -383,6 +383,10 @@ namespace espressopp {
                          p4.force() -= forceqm;  
                      }
                      
+                     // DEBUG START
+                     //std::cout << "Nonbonded force (QM region): " << forceqm << "\n";
+                     // DEBUG END
+
                  }
                  
                  //Iterate the second iterator
@@ -478,7 +482,7 @@ namespace espressopp {
           int type1 = p1.type();
           int type2 = p2.type();
           
-          if(speedup = true){
+          if(speedup == true){
              const PotentialCL &potential = getPotentialCL(type1, type2);
              e += potential._computeEnergy(p1, p2);
           }
@@ -1233,265 +1237,429 @@ namespace espressopp {
     VerletListPIadressInteractionTemplate < _PotentialQM, _PotentialCL >::
     computeVirial() {
       LOG4ESPP_INFO(theLogger, "compute the virial for the Verlet List");
+
+//
+//      real w = 0.0;
+//      for (PairList::Iterator it(verletList->getPairs());
+//           it.isValid(); ++it) {
+//        Particle &p1 = *it->first;
+//        Particle &p2 = *it->second;
+//        int type1 = p1.type();
+//        int type2 = p2.type();
+//        const Potential &potential = getPotential(type1, type2);
+//        // shared_ptr<Potential> potential = getPotential(type1, type2);
+//
+//        Real3D force(0.0, 0.0, 0.0);
+//        if(potential._computeForce(force, p1, p2)) {
+//        // if(potential->_computeForce(force, p1, p2)) {
+//          Real3D r21 = p1.position() - p2.position();
+//          w = w + r21 * force;
+//        }
+//      }
+//
+//      // reduce over all CPUs
+//      real wsum;
+//      boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
+//      return wsum;
+
+      real w = 0.0;
       
-      std::cout << "Warning! At the moment IK computeVirial in VerletListPIadress does not work"<<std::endl;
-      exit(1);
-      return 0.0;
-      
-      /*std::set<Particle*> cgZone = verletList->getCGZone();
-      for (std::set<Particle*>::iterator it=cgZone.begin();
-              it != cgZone.end(); ++it) {
 
-          Particle &vp = **it;
+      // Get the cg and the adrZones
+      // std::set<Particle*> cgZone = verletList->getCGZone();
+      // std::set<Particle*> adrZone = verletList->getAdrZone();
 
-          FixedTupleListAdress::iterator it3;
-          it3 = fixedtupleList->find(&vp);
-
-          if (it3 != fixedtupleList->end()) {
-
-              std::vector<Particle*> atList;
-              atList = it3->second;
-
-              // compute center of mass
-              Real3D cmp(0.0, 0.0, 0.0); // center of mass position
-              //Real3D cmv(0.0, 0.0, 0.0); // center of mass velocity
-              //real M = vp.getMass(); // sum of mass of AT particles
-              for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                   it2 != atList.end(); ++it2) {
-                  Particle *at = *it2;
-                  //Real3D d1 = at.position() - vp.position();
-                  //Real3D d1;
-                  //verletList->getSystem()->bc->getMinimumImageVectorBox(d1, at.position(), vp.position());
-                  //cmp += at.mass() * d1;
-
-                  cmp += at->mass() * at->position();
-                  //cmv += at.mass() * at.velocity();
-              }
-              cmp /= vp.getMass();
-              //cmv /= vp.getMass();
-              //cmp += vp.position(); // cmp is a relative position
-              //std::cout << " cmp M: "  << M << "\n\n";
-              //std::cout << "  moving VP to " << cmp << ", velocitiy is " << cmv << "\n";
-
-              // update (overwrite) the position and velocity of the VP
-              vp.position() = cmp;
-              //vp.velocity() = cmv;
-
-          }
-          else { // this should not happen
-              std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-              std::cout << " (" << vp.position() << ")\n";
-              exit(1);
-              return 0.0;
-          }
-      }
-      
-      std::set<Particle*> adrZone = verletList->getAdrZone();
-      for (std::set<Particle*>::iterator it=adrZone.begin();
-              it != adrZone.end(); ++it) {
-
-          Particle &vp = **it;
-
-          FixedTupleListAdress::iterator it3;
-          it3 = fixedtupleList->find(&vp);
-
-          if (it3 != fixedtupleList->end()) {
-
-              std::vector<Particle*> atList;
-              atList = it3->second;
-
-              // compute center of mass
-              Real3D cmp(0.0, 0.0, 0.0); // center of mass position
-              //Real3D cmv(0.0, 0.0, 0.0); // center of mass velocity
-              //real M = vp.getMass(); // sum of mass of AT particles
-              for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                   it2 != atList.end(); ++it2) {
-                  Particle &at = **it2;
-                  //Real3D d1 = at.position() - vp.position();
-                  //Real3D d1;
-                  //verletList->getSystem()->bc->getMinimumImageVectorBox(d1, at.position(), vp.position());
-                  //cmp += at.mass() * d1;
-
-                  cmp += at.mass() * at.position();
-                  //cmv += at.mass() * at.velocity();
-              }
-              cmp /= vp.getMass();
-              //cmv /= vp.getMass();
-              //cmp += vp.position(); // cmp is a relative position
-              //std::cout << " cmp M: "  << M << "\n\n";
-              //std::cout << "  moving VP to " << cmp << ", velocitiy is " << cmv << "\n";
-
-              // update (overwrite) the position and velocity of the VP
-              vp.position() = cmp;
-              //vp.velocity() = cmv;
-
-          }
-          else { // this should not happen
-              std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-              std::cout << " (" << vp.position() << ")\n";
-              exit(1);
-              return 0.0;
-          }
+      // Initialize the energy diff map to zero
+      // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to set to zero...
+      /*for (std::set<Particle*>::iterator it=adrZone.begin();
+                    it != adrZone.end(); ++it) {
+                  	Particle &p = **it;
+                  	// intitialize energy diff AA-CG
+                  	energydiff[&p]=0.0;
       }*/
-      //const bc::BC& bc = *getSystemRef().bc;
-      
-      /*real w = 0.0; 
- 
-      for (PairList::Iterator it(verletList->getPairs());                
-           it.isValid(); ++it) {*/
-        /*std::cout << "Should not happen!\n";
-        exit(1);
-        return 0.0;*/
-        /*Particle &p1 = *it->first;                                       
-        Particle &p2 = *it->second;                                      
-        int type1 = p1.type();                                           
-        int type2 = p2.type();
-        const PotentialCG &potential = getPotentialCG(type1, type2);
 
-        Real3D force(0.0, 0.0, 0.0);
-        if(potential._computeForce(force, p1, p2)) {
-          Real3D dist = p1.position() - p2.position();
-          //Real3D dist;
-          //bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
-          
-          w += dist * force;
+
+      // Pairs not inside the QM/Hybrid Zone (i.e. CL region)
+
+      // REMOVE FOR IDEAL GAS
+      for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
+        //std::cout << "If this appears -> FAIL!\n";
+        // Get particles from pairlist
+        Particle &p1 = *it->first;
+        Particle &p2 = *it->second;
+
+        // Calculate forces in CL region
+        if (speedup == true) {
+            const PotentialCL &potentialCL = getPotentialCL(p1.type(), p2.type());
+            Real3D forcecl(0.0, 0.0, 0.0);
+            if(potentialCL._computeForce(forcecl, p1, p2)) {
+            	Real3D dist(0.0, 0.0, 0.0);
+            	verletList->getSystem()->bc->getMinimumImageVector(dist, p1.position(), p2.position());
+            	//Real3D dist = p1.position() - p2.position();
+            	w += dist * forcecl;
+            }
         }
-      }
-      
-      //if (KTI == false) {
-      //makeWeights();
-      //}
-      
-      for (PairList::Iterator it(verletList->getAdrPairs()); it.isValid(); ++it) {
-         real w1, w2;
-         // these are the two VP interacting
-         Particle &p1 = *it->first;
-         Particle &p2 = *it->second;     
+        else{
+            // Get the corresponding tuples
+            FixedTupleListAdress::iterator it3;
+            FixedTupleListAdress::iterator it4;
+            it3 = fixedtupleList->find(&p1);
+            it4 = fixedtupleList->find(&p2);
 
-         w1 = p1.lambda();         
-         w2 = p2.lambda();
-         real w12 = (w1 + w2)/2.0;  // H-AdResS
-         
-         // force between VP particles
-         int type1 = p1.type();
-         int type2 = p2.type();
-         const PotentialCG &potentialCG = getPotentialCG(type1, type2);
-         Real3D forcevp(0.0, 0.0, 0.0);
-                if (w12 != 1.0) {*/ // calculate VP force if both VP are outside AT region (CG-HY, HY-HY)
-                    /*std::cout << "Should not happen!\n";
-                    exit(1);
-                    return 0.0;*/
-                    /*if (potentialCG._computeForce(forcevp, p1, p2)) {
-                          forcevp *= (1.0 - w12);
-                          Real3D dist = p1.position() - p2.position();
-                          //Real3D dist;
-                          //bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
-                          w += dist * forcevp;  
+            if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
 
+                // Get the PI bead lists (i.e. the AdResS particles)
+                std::vector<Particle*> atList1;
+                std::vector<Particle*> atList2;
+                atList1 = it3->second;
+                atList2 = it4->second;
+
+                // Iterate the two iterators in a parallel fashion
+                std::vector<Particle*>::iterator itv2 = atList2.begin();
+                for (std::vector<Particle*>::iterator itv = atList1.begin();
+                        itv != atList1.end(); ++itv) {
+
+                    // they should be the same length... Total Trotter beads the same everywhere in the system
+                    if (itv2 == atList2.end()){
+                        std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+                        p1.id() << "\n";
+                        exit(1);
+                        return 0.0;
                     }
+
+                    // Get the individual PI beads
+                    Particle &p3 = **itv;
+                    Particle &p4 = **itv2;
+
+                    // the beads we get should have the same Trotter bead number to interact with each other
+                    if (p3.pib() != p4.pib()){
+                        std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+                        p3.id() << " and " << p4.id() << "\n";
+                        exit(1);
+                        return 0.0;
+                    }
+
+                    // Calculate CL forces
+                    const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
+                    Real3D forcecl(0.0, 0.0, 0.0);
+                    if(potentialCL._computeForce(forcecl, p3, p4)) {
+                         forcecl *= 1.0/ntrotter;
+                     	 Real3D dist(0.0, 0.0, 0.0);
+                     	 verletList->getSystem()->bc->getMinimumImageVector(dist, p3.position(), p4.position());
+                     	//Real3D dist = p1.position() - p2.position();
+                     	 w += dist * forcecl;
+//                         p3.force() += forcecl;
+//                         p4.force() -= forcecl;
+                    }
+
+                    //Iterate the second iterator
+                    ++itv2;
+
                 }
-       
-         // force between AT particles
-         if (w12 != 0.0) { // calculate AT force if both VP are outside CG region (HY-HY, HY-AT, AT-AT)
-             FixedTupleListAdress::iterator it3;
-             FixedTupleListAdress::iterator it4;
-             it3 = fixedtupleList->find(&p1);
-             it4 = fixedtupleList->find(&p2);
 
-             //std::cout << "Interaction " << p1.id() << " - " << p2.id() << "\n";
-             if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
-
-                 std::vector<Particle*> atList1;
-                 std::vector<Particle*> atList2;
-                 atList1 = it3->second;
-                 atList2 = it4->second;                
-                 
-                 for (std::vector<Particle*>::iterator itv = atList1.begin();
-                         itv != atList1.end(); ++itv) {
-
-                     Particle &p3 = **itv;
-
-                     for (std::vector<Particle*>::iterator itv2 = atList2.begin();
-                                          itv2 != atList2.end(); ++itv2) {
-
-                         Particle &p4 = **itv2;
-
-                         // AT forces
-                         const PotentialAT &potentialAT = getPotentialAT(p3.type(), p4.type());
-                         Real3D forceat(0.0, 0.0, 0.0);
-                         if(potentialAT._computeForce(forceat, p3, p4)) {
-                         forceat *= w12;
-                         Real3D dist = p3.position() - p4.position();
-                         //Real3D dist;
-                         //bc.getMinimumImageVectorBox(dist, p3.position(), p3.position());*/
-                         /*if (dist * forceat > 400.0){
-                                std::cout << "IDs: id_p3=" << p3.id() << " and id_p4=" << p4.id() << "   #####   ";                             
-                                std::cout << "Types: type_p3=" << p3.type() << " and type_p4=" << p4.type() << "   #####   ";   
-                                std::cout << "dist: " << sqrt(dist*dist) << "   #####   ";
-                                std::cout << "force: " << forceat << "   #####   ";
-                                std::cout << "product: " << dist * forceat << "\n";
-                                if (sqrt(dist*dist) > 1.0){
-                                        std::cout << "DIST TOO BIG!\n";
-                                        exit(1);
-                                        return 0.0;
-                                }
-                         }*/
-                         
-                         /*w += dist * forceat; 
-                         }
-                     }
-                 }
-                 
-             }
-             else { // this should not happen
-                 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+            }
+            else{ // this should not happen
+                std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
                          p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
-                 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
-                 exit(1);
-                 return 0.0;
+                std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+                exit(1);
+                return 0.0;
+            }
+
+        }
+
+      }
+      // REMOVE FOR IDEAL GAS
+
+
+      // Pairs inside the QM/Hybrid Zone
+      for (PairList::Iterator it(verletList->getAdrPairs()); it.isValid(); ++it) {
+         //std::cout << "If this appears -> FAIL!\n";
+         // for weights
+         real w1, w2;
+
+         // Get particles from pairlist
+         Particle &p1 = *it->first;
+         Particle &p2 = *it->second;
+
+         // Get their weights
+         w1 = p1.lambda();
+         w2 = p2.lambda();
+         real w12 = (w1 + w2)/2.0;
+
+         // Get the corresponding tuples
+         FixedTupleListAdress::iterator it3;
+         FixedTupleListAdress::iterator it4;
+         it3 = fixedtupleList->find(&p1);
+         it4 = fixedtupleList->find(&p2);
+
+         if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+             // Get the PI bead lists (i.e. the AdResS particles)
+             std::vector<Particle*> atList1;
+             std::vector<Particle*> atList2;
+             atList1 = it3->second;
+             atList2 = it4->second;
+
+             // Iterate the two iterators in a parallel fashion
+             std::vector<Particle*>::iterator itv2 = atList2.begin();
+             for (std::vector<Particle*>::iterator itv = atList1.begin();
+                     itv != atList1.end(); ++itv) {
+
+                 // they should be the same length... Total Trotter beads the same everywhere in the system
+                 if (itv2 == atList2.end()){
+                     std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+                     p1.id() << "\n";
+                     exit(1);
+                     return 0.0;
+                 }
+
+                 // Get the individual PI beads
+                 Particle &p3 = **itv;
+                 Particle &p4 = **itv2;
+
+                 // the beads we get should have the same Trotter bead number to interact with each other
+                 if (p3.pib() != p4.pib()){
+                     std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+                     p3.id() << " and " << p4.id() << "\n";
+                     exit(1);
+                     return 0.0;
+                 }
+
+                 // If at least one particle is in the hybrid region, calculate both forces.
+                 if (w12 != 1.0) {
+
+                     // REMOVE FOR IDEAL GAS
+                     // Calculate CL forces
+                     const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
+                     Real3D forcecl(0.0, 0.0, 0.0);
+                     if(potentialCL._computeForce(forcecl, p3, p4)) {
+                         forcecl *= (1.0 - w12)/ntrotter;
+                         //p3.force() += forcecl;
+                         //p4.force() -= forcecl;
+                     	 Real3D dist(0.0, 0.0, 0.0);
+                     	 verletList->getSystem()->bc->getMinimumImageVector(dist, p3.position(), p4.position());
+                     	//Real3D dist = p1.position() - p2.position();
+                     	 w += dist * forcecl;
+                     }
+                     // REMOVE FOR IDEAL GAS
+
+                     // Calculate QM forces
+                     const PotentialQM &potentialQM = getPotentialQM(p3.type(), p4.type());
+                     Real3D forceqm(0.0, 0.0, 0.0);
+                     if(potentialQM._computeForce(forceqm, p3, p4)) {
+                         forceqm *= w12/ntrotter;
+                     	 Real3D dist(0.0, 0.0, 0.0);
+                     	 verletList->getSystem()->bc->getMinimumImageVector(dist, p3.position(), p4.position());
+                     	//Real3D dist = p1.position() - p2.position();
+                     	 w += dist * forceqm;
+                         //p3.force() += forceqm;
+                         //p4.force() -= forceqm;
+                     }
+
+                     // Drift term WARNING - DOES NOT WORK CURRENTLY !!!
+                     /*if (w12 != 0.0) {   //at least one particle in hybrid region => need to do the energy calculation
+                        real energyvpcl = potentialCL._computeEnergy(p3, p4);
+                        if (w1 != 0.0) {   // if particle one is in hybrid region
+                            energydiff[&p1] += energyvpcl;   // add CL energy for virtual particle 1
+                        }
+                        if (w2 != 0.0) {   // if particle two is in hybrid region
+                            energydiff[&p2] += energyvpcl;   // add CL energy for virtual particle 2
+                        }
+
+                        real energyvpqm = potentialQM._computeEnergy(p3, p4);
+                        if (w1 != 0.0) {   // if particle one is in hybrid region
+                            energydiff[&p1] -= energyvpqm;   // add CL energy for virtual particle 1
+                        }
+                        if (w2 != 0.0) {   // if particle two is in hybrid region
+                            energydiff[&p2] -= energyvpqm;   // add CL energy for virtual particle 2
+                        }
+
+                        // WARNING - DOES NOT WORK CURRENTLY !!!
+                          std::cout << "No Drift terms in VerletListPIadressInteractionTemplate. This feature does currently not work.\n";
+                          exit(1);
+                          return;
+                        // WARNING - DOES NOT WORK CURRENTLY !!!
+
+                    }*/
+
+                 }
+                 else{   // both particles must be in the atomistic region now...
+
+                     // Calculate QM forces
+                     const PotentialQM &potentialQM = getPotentialQM(p3.type(), p4.type());
+                     Real3D forceqm(0.0, 0.0, 0.0);
+                     if(potentialQM._computeForce(forceqm, p3, p4)) {
+                         forceqm *= 1.0/ntrotter;
+                     	 Real3D dist(0.0, 0.0, 0.0);
+                     	 verletList->getSystem()->bc->getMinimumImageVector(dist, p3.position(), p4.position());
+                     	  //Real3D dist = p1.position() - p2.position();
+                     	 w += dist * forceqm;
+                         //p3.force() += forceqm;
+                         //p4.force() -= forceqm;
+                     }
+
+                 }
+
+                 //Iterate the second iterator
+                 ++itv2;
+
              }
-         }*/
-      /*}      
-      
+
+         }
+         else { // this should not happen
+             std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+                     p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+             std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+             exit(1);
+             return 0.0;
+         }
+
+      }
+
       real wsum;
       wsum = 0.0;
       boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
-      return wsum;      */
-      
-      /*real w = 0.0;           OLD STUFF
-      for (PairList::Iterator it(verletList->getPairs());                
-           it.isValid(); ++it) {                                         
-        Particle &p1 = *it->first;                                       
-        Particle &p2 = *it->second;                                      
-        int type1 = p1.type();                                           
-        int type2 = p2.type();
-        const PotentialCG &potential = getPotentialCG(type1, type2);
+      return wsum;
 
-        Real3D force(0.0, 0.0, 0.0);
-        if(potential._computeForce(force, p1, p2)) {
-          Real3D dist = p1.position() - p2.position();
-          w = w + dist * force;
-        }
-      }
 
-      for (PairList::Iterator it(verletList->getAdrPairs());
-                 it.isValid(); ++it) {
-              Particle &p1 = *it->first;
-              Particle &p2 = *it->second;
-              int type1 = p1.type();
-              int type2 = p2.type();
-              const PotentialCG &potential = getPotentialCG(type1, type2);
 
-              Real3D force(0.0, 0.0, 0.0);
-              if(potential._computeForce(force, p1, p2)) {
-                Real3D dist = p1.position() - p2.position();
-                w = w + dist * force;
-              }
-      }
 
-      real wsum;
-      boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
-      return wsum;*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+//      real w = 0.0;
+//
+//      for (PairList::Iterator it(verletList->getPairs());
+//           it.isValid(); ++it) {
+//        /*std::cout << "Should not happen!\n";
+//        exit(1);
+//        return 0.0;*/
+//        Particle &p1 = *it->first;
+//        Particle &p2 = *it->second;
+//        int type1 = p1.type();
+//        int type2 = p2.type();
+//        const PotentialCG &potential = getPotentialCG(type1, type2);
+//
+//        Real3D force(0.0, 0.0, 0.0);
+//        if(potential._computeForce(force, p1, p2)) {
+//          Real3D dist = p1.position() - p2.position();
+//          //Real3D dist;
+//          //bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
+//
+//          w += dist * force;
+//        }
+//      }
+//
+//      //if (KTI == false) {
+//      //makeWeights();
+//      //}
+//
+//      for (PairList::Iterator it(verletList->getAdrPairs()); it.isValid(); ++it) {
+//         real w1, w2;
+//         // these are the two VP interacting
+//         Particle &p1 = *it->first;
+//         Particle &p2 = *it->second;
+//
+//         w1 = p1.lambda();
+//         w2 = p2.lambda();
+//         real w12 = (w1 + w2)/2.0;  // H-AdResS
+//
+//         // force between VP particles
+//         int type1 = p1.type();
+//         int type2 = p2.type();
+//         const PotentialCG &potentialCG = getPotentialCG(type1, type2);
+//         Real3D forcevp(0.0, 0.0, 0.0);
+//                if (w12 != 1.0) { // calculate VP force if both VP are outside AT region (CG-HY, HY-HY)
+//                    /*std::cout << "Should not happen!\n";
+//                    exit(1);
+//                    return 0.0;*/
+//                    if (potentialCG._computeForce(forcevp, p1, p2)) {
+//                          forcevp *= (1.0 - w12);
+//                          Real3D dist = p1.position() - p2.position();
+//                          //Real3D dist;
+//                          //bc.getMinimumImageVectorBox(dist, p1.position(), p2.position());
+//                          w += dist * forcevp;
+//
+//                    }
+//                }
+//
+//         // force between AT particles
+//         if (w12 != 0.0) { // calculate AT force if both VP are outside CG region (HY-HY, HY-AT, AT-AT)
+//             FixedTupleListAdress::iterator it3;
+//             FixedTupleListAdress::iterator it4;
+//             it3 = fixedtupleList->find(&p1);
+//             it4 = fixedtupleList->find(&p2);
+//
+//             //std::cout << "Interaction " << p1.id() << " - " << p2.id() << "\n";
+//             if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+//
+//                 std::vector<Particle*> atList1;
+//                 std::vector<Particle*> atList2;
+//                 atList1 = it3->second;
+//                 atList2 = it4->second;
+//
+//                 for (std::vector<Particle*>::iterator itv = atList1.begin();
+//                         itv != atList1.end(); ++itv) {
+//
+//                     Particle &p3 = **itv;
+//
+//                     for (std::vector<Particle*>::iterator itv2 = atList2.begin();
+//                                          itv2 != atList2.end(); ++itv2) {
+//
+//                         Particle &p4 = **itv2;
+//
+//                         // AT forces
+//                         const PotentialAT &potentialAT = getPotentialAT(p3.type(), p4.type());
+//                         Real3D forceat(0.0, 0.0, 0.0);
+//                         if(potentialAT._computeForce(forceat, p3, p4)) {
+//                         forceat *= w12;
+//                         Real3D dist = p3.position() - p4.position();
+//                         //Real3D dist;
+//                         //bc.getMinimumImageVectorBox(dist, p3.position(), p3.position());
+//                         /*if (dist * forceat > 400.0){
+//                                std::cout << "IDs: id_p3=" << p3.id() << " and id_p4=" << p4.id() << "   #####   ";
+//                                std::cout << "Types: type_p3=" << p3.type() << " and type_p4=" << p4.type() << "   #####   ";
+//                                std::cout << "dist: " << sqrt(dist*dist) << "   #####   ";
+//                                std::cout << "force: " << forceat << "   #####   ";
+//                                std::cout << "product: " << dist * forceat << "\n";
+//                                if (sqrt(dist*dist) > 1.0){
+//                                        std::cout << "DIST TOO BIG!\n";
+//                                        exit(1);
+//                                        return 0.0;
+//                                }
+//                         }*/
+//
+//                         w += dist * forceat;
+//                         }
+//                     }
+//                 }
+//
+//             }
+//             else { // this should not happen
+//                 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+//                         p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+//                 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+//                 exit(1);
+//                 return 0.0;
+//             }
+//         }
+//      }
+//
+//      real wsum;
+//      wsum = 0.0;
+//      boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
+//      return wsum;
     }
 
     template < typename _PotentialQM, typename _PotentialCL > inline void
