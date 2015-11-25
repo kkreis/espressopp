@@ -70,6 +70,14 @@ namespace espressopp {
       
       UpdateCounter = 0;
       
+      // AdResS PI stuff
+      dhy = verletList->getHy();
+      pidhy2 = M_PI/(dhy * 2.0);
+      dex = verletList->getEx();
+      dex2 = dex * dex;
+      dexdhy = dex + verletList->getHy();
+      dexdhy2 = dexdhy * dexdhy;
+
       //verletList = NULL;
       
       //kb = 1.3806488;//*pow(10.0,-23); // FIX
@@ -582,6 +590,8 @@ namespace espressopp {
                                        it2 != atList.end(); ++it2) {
                     Particle &at = **it2;
 
+                    // VELOCITY APPROACH:
+                    /*
                     if(at.pib() == 1){
                         real dtfm = half_dt / vp.mass();
                         at.velocity() += dtfm * at.forcem();
@@ -601,8 +611,10 @@ namespace espressopp {
                          std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
                          exit(1);
                          return;
-                    }
+                    }*/
                     
+                    // MOMENTUM APPROACH:
+                    at.velocity() += half_dt * at.forcem();
                     //cout << "Force in integrateV1(int t) with t = " << t << ". Force: " << at.force() << " Modeforce: " << at.forcem() << "\n";
                     
                 }
@@ -649,9 +661,15 @@ namespace espressopp {
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
                         //real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
-                    	real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+
+                    	// VELOCITY APPROACH:
+                    	//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
                         //cout << "at.forcem() I for bead " << at.pib() << ": " << at.forcem() << "\n\n";
-                        at.velocity() += dtfm * at.forcem();
+                        //at.velocity() += dtfm * at.forcem();
+
+                        // MOMENTUM APPROACH:
+                        at.velocity() += half_dt4 * at.forcem();
+
                         //at.velocity() -= at.modepos()*omega2 * half_dt4;
                         //cout << "IntegrateV2 - 1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
                         //cout << "IntegrateV2 - 1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
@@ -677,12 +695,19 @@ namespace espressopp {
                             Particle &at2 = **it5;
                             if(at2.pib() != 1){
                                 //real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter))*at2.velocity().sqr();
-                                real chi = Eigenvalues.at(at2.pib()-1)*at2.velocity().sqr();        
+
+                            	// VELOCITY APPROACH:
+                                //real chi = Eigenvalues.at(at2.pib()-1)*at2.velocity().sqr();
+
+                                // MOMENTUM APPROACH:
+                                real chi = at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
+
                                 xi += chi;
                             }
                         }
                         
-                        real dtfm = half_dt / (vp.mass());
+                        // VELOCITY APPROACH ONLY:
+                        //real dtfm = half_dt / (vp.mass());
                         
                         // calculate distance to nearest adress particle or center
                         std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
@@ -712,7 +737,12 @@ namespace espressopp {
                         //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
                         //mindriftforceX *= 0.5;
                         //mindriftforceX *= 49.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
-                        mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
+
+                        //VELOCITY APPROACH:
+                        //mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
+
+						// MOMENTUM APPROACH:
+                        mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(ntrotter*vp.varmass()*vp.varmass());
 
                         //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
@@ -730,8 +760,13 @@ namespace espressopp {
                         //Real3D driftforceadd(0.0,0.0,0.0);   
                         //vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
                         //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";                       
-                        at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
                         
+                        //VELOCITY APPROACH:
+                        //at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
+
+                        // MOMENTUM APPROACH:
+                        at.velocity() += half_dt * (at.forcem() - driftforceadd);
+
                         //cout << "IntegrateV2 - 2, at.forcem() - driftforceadd for pib " << at.pib() << ": " << at.forcem() - driftforceadd << "\n";
                         
                         vp.velocity() = at.velocity();
@@ -759,8 +794,14 @@ namespace espressopp {
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
                         //real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
-                    	real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
-                        at.velocity() += dtfm * at.forcem();
+
+                    	// VELOCITY APPROACH:
+                    	//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        //at.velocity() += dtfm * at.forcem();
+
+                    	// MOMENTUM APPROACH:
+                    	at.velocity() += half_dt4 * at.forcem();
+
                         //at.velocity() -= at.modepos()*omega2 * half_dt4;
                         //cout << "at.forcem() II for bead " << at.pib() << ": " << at.forcem() << "\n\n";
                         //cout << "IntegrateV2 - 3, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
@@ -786,7 +827,10 @@ namespace espressopp {
     
     
     void VelocityVerletPI::integrateModePos()
-    {   
+    {
+
+    	// VELOCITY APPROACH:
+    	/*
         real half_dt = 0.5 * dt; 
                 
         System& system = getSystemRef();
@@ -816,6 +860,113 @@ namespace espressopp {
                     
                 }
             
+            }
+            else { // this should not happen
+                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+                  std::cout << " (" << vp.position() << ")\n";
+                  exit(1);
+                  return;
+            }
+        }*/
+
+
+    	// MOMENTUM APPROACH:
+
+        System& system = getSystemRef();
+        CellList realCells = system.storage->getRealCells(); //!!!!
+        shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
+        //cout << "IntegrateModePos, half_dt: " << half_dt << "\n";
+        for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+
+            Particle &vp = *cit;
+
+            real half_dt4 = 0.25 * dt / (vp.mass());
+
+            FixedTupleListAdress::iterator it3;
+            it3 = fixedtupleList->find(&vp);
+            if (it3 != fixedtupleList->end()) {
+                std::vector<Particle*> atList;
+                atList = it3->second;
+
+                // First half_dt4 loop with only centroid mode
+                for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                       it2 != atList.end(); ++it2) {
+                    Particle &at = **it2;
+
+                    if(at.pib() == 1){
+                    	at.modepos() += half_dt4 * at.velocity();
+                        break;
+                    }else{
+                    	continue;
+                    }
+                }
+
+                // Update resolution and variable masses
+                // calculate distance to nearest adress particle or center
+                std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+                Real3D pa = **it2; // position of adress particle
+                Real3D d1(0.0, 0.0, 0.0);
+                real min1sq;
+                //Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+                verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
+                //real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+                //real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+                //real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+                if (verletList->getAdrRegionType()) { // spherical adress region
+                  min1sq = d1.sqr(); // set min1sq before loop
+                  ++it2;
+                  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+                       pa = **it2;
+                       verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
+                       real distsq1 = d1.sqr();
+                       if (distsq1 < min1sq) min1sq = distsq1;
+                  }
+                }
+                else { //slab-type adress region
+                  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+                  ++it2;
+                  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+                       pa = **it2;
+                       //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+                       //d1 = vp.position()[0] - pa[0];
+                       verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);        // X SPLIT VS SPHERE CHANGE
+                       //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+                       real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+                       if (distsq1 < min1sq) min1sq = distsq1;
+                  }
+                }
+                real w = weight(min1sq);
+                vp.lambda() = w;
+                real wDeriv = weightderivative(min1sq);
+                vp.lambdaDeriv() = wDeriv;
+                vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
+
+                // half_dt2 loop without centroid mode
+                real half_dt = 0.5 * dt / (vp.varmass()*ntrotter);
+                for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                       it2 != atList.end(); ++it2) {
+                    Particle &at = **it2;
+
+                    if((at.pib() == 1) || ((speedup == true) && (vp.lambda() < 0.000000001) && (at.pib() != 1))){
+                        continue;
+                    }else{
+                        at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
+                    }
+                }
+
+                // Second half_dt4 loop with only centroid mode
+                for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                       it2 != atList.end(); ++it2) {
+                    Particle &at = **it2;
+
+                    if(at.pib() == 1){
+                    	at.modepos() += half_dt4 * at.velocity();
+                        break;
+                    }else{
+                    	continue;
+                    }
+                }
+
             }
             else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -855,13 +1006,19 @@ namespace espressopp {
                     
                     if(at.pib() == 1){
                         Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
-                        at.velocity() = prefac1 * at.velocity() + prefac2/sqrt(vp.mass()) * ranval;
+                        // VELOCITY APPROACH:
+                        //at.velocity() = prefac1 * at.velocity() + prefac2/sqrt(vp.mass()) * ranval;
+
+                        // MOMENTUM APPROACH:
+                        at.velocity() = prefac1 * at.velocity() + prefac2*sqrt(vp.mass()) * ranval;
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
-                        //at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter))))) * ranval;
-                        //at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*Eigenvalues.at(at.pib()-1)))) * ranval;
-                        at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1)))) * ranval;
+                        // VELOCITY APPROACH:
+                        //at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1)))) * ranval;
+
+                        // MOMENTUM APPROACH:
+                        at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
@@ -1626,15 +1783,21 @@ namespace espressopp {
                     Particle &at = **it2;
                                         
                     if(at.pib() == 1){
-                        esum += at.velocity().sqr() * vp.mass();
+                    	// VELOCITY APPROACH:
+                        //esum += at.velocity().sqr() * vp.mass();
+
+                        // MOMENTUM APPROACH:
+                        esum += at.velocity().sqr() / vp.mass();
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         if((speedup == true) && (vp.lambda() < 0.000000001)){
                             continue;
                         }else{
-                            //esum += at.velocity().sqr() * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        	//esum += at.velocity().sqr() * (vp.varmass()*Eigenvalues.at(at.pib()-1));
-                            esum += at.velocity().sqr() * (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        	// VELOCITY APPROACH:
+                            //esum += at.velocity().sqr() * (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+
+                            // MOMENTUM APPROACH:
+                            esum += at.velocity().sqr() / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
                         }
                     }
                     else{
@@ -1825,7 +1988,12 @@ namespace espressopp {
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //esum += 49.5*vp.mass()*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
                     	//esum += 49.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
-                    	esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+
+						// VELOCITY APPROACH:
+                    	//esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+
+                    	// MOMENTUM APPROACH:
+                    	esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(ntrotter*vp.varmass()*vp.varmass()*Eigenvalues.at(at.pib()-1));
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
@@ -1905,6 +2073,28 @@ namespace espressopp {
         boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, esum, esumtotal, std::plus<real>());
 
         return esumtotal;
+    }
+
+
+    // AdResS Weighting function
+    real VelocityVerletPI::weight(real distanceSqr){
+        if (dex2 > distanceSqr) return 1.0;
+        else if (dexdhy2 < distanceSqr) return 0.0;
+        else {
+            real argument = sqrt(distanceSqr) - dex;
+            //return 1.0-(30.0/(pow(dhy, 5.0)))*(1.0/5.0*pow(argument, 5.0)-dhy/2.0*pow(argument, 4.0)+1.0/3.0*pow(argument, 3.0)*dhy*dhy);
+            return pow(cos(pidhy2 * argument),2.0); // for cosine squared weighting function
+        }
+    }
+    // AdResS Weight Derivative function
+    real VelocityVerletPI::weightderivative(real distanceSqr){
+        if (dex2 > distanceSqr) return 0.0;
+        else if (dexdhy2 < distanceSqr) return 0.0;
+        else{
+            real argument = sqrt(distanceSqr) - dex;
+            //return -(30.0/(pow(dhy, 5.0)))*(pow(argument, 4.0)-2.0*dhy*pow(argument, 3.0)+argument*argument*dhy*dhy);
+            return -1.0 * pidhy2 * 2.0 * cos(pidhy2*argument) * sin(pidhy2*argument); // for cosine squared weighting function
+        }
     }
 
 

@@ -182,6 +182,13 @@ namespace espressopp {
         real dt2;
         real dt3;
         //real kb;
+
+        real dhy;
+        real pidhy2;
+        real dex;
+        real dex2;
+        real dexdhy;
+        real dexdhy2;
         
         int UpdateCounter; // JUST FOR CHECKING AND DEBUGGING
                 
@@ -247,6 +254,9 @@ namespace espressopp {
         void transPos1();
         void transPos2();
         
+        real weight(real distanceSqr);
+        real weightderivative(real distanceSqr);
+
         //void printPositions(bool withGhost);
 
         //void printForces(bool withGhost);
