@@ -126,6 +126,11 @@ namespace espressopp {
         void setSpeedup(bool _speedup);
         /** Getter routine for speedup. */
         bool getSpeedup() { return speedup; }        
+
+        /** Setter routine for speedup. */
+        void setConstKinMass(bool _constkinmass);
+        /** Getter routine for speedup. */
+        bool getConstKinMass() { return constkinmass; }
         
         /** Setter routine for verletList. */
         void setVerletList(shared_ptr<VerletListAdress> _verletList);
@@ -178,6 +183,7 @@ namespace espressopp {
         int ntrotter; // number of Trotter beads
         bool resortFlag;  //!< true implies need for resort of particles
         bool speedup; // Freeze rings in classical region?
+        bool constkinmass; // Use a constant kinetic mass for all modes?
         real maxDist;
         real dt2;
         real dt3;

@@ -63,6 +63,7 @@ namespace espressopp {
       gamma = 0.0;
       ntrotter = 0;
       speedup = false;
+      constkinmass = false;
       sStep = 0;
       mStep = 0;
       omega2 = 0.0;
@@ -614,7 +615,11 @@ namespace espressopp {
                     }*/
                     
                     // MOMENTUM APPROACH:
-                    at.velocity() += half_dt * at.forcem();
+					if((at.pib() != 1) && (speedup == true) && (vp.lambda() < 0.000000001)){
+						continue;
+					}else{
+						at.velocity() += half_dt * at.forcem();
+					}
                     //cout << "Force in integrateV1(int t) with t = " << t << ". Force: " << at.force() << " Modeforce: " << at.forcem() << "\n";
                     
                 }
@@ -650,168 +655,213 @@ namespace espressopp {
                 std::vector<Particle*> atList;
                 atList = it3->second;
 
-                // First half_dt4 loop without centroid mode
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
+                if (constkinmass == false){ // kinetic mass also changes - hence, second decomposition level required
                 
-                    if(at.pib() == 1){
-                        continue;
-                    }
-                    else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        //real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        //real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                	//TEST
+                	//Real3D test(0.0,0.0,0.0);
+                	//TEST
 
-                    	// VELOCITY APPROACH:
-                    	//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
-                        //cout << "at.forcem() I for bead " << at.pib() << ": " << at.forcem() << "\n\n";
-                        //at.velocity() += dtfm * at.forcem();
+					// First half_dt4 loop without centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
 
-                        // MOMENTUM APPROACH:
-                        at.velocity() += half_dt4 * at.forcem();
+						if(at.pib() == 1){
+							continue;
+						}
+						else if(at.pib() > 1 && at.pib() <= ntrotter){
+							//real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+							//real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
 
-                        //at.velocity() -= at.modepos()*omega2 * half_dt4;
-                        //cout << "IntegrateV2 - 1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
-                        //cout << "IntegrateV2 - 1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
-                    }
-                    else{
-                         std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
-                         exit(1);
-                         return;
-                    }
+							// VELOCITY APPROACH:
+							//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+							//cout << "at.forcem() I for bead " << at.pib() << ": " << at.forcem() << "\n\n";
+							//at.velocity() += dtfm * at.forcem();
+
+							// MOMENTUM APPROACH:
+							if((speedup == true) && (vp.lambda() < 0.000000001)){
+								continue;
+							}else{
+								//TEST
+								//test = at.velocity();
+								//TEST
+
+								at.velocity() += half_dt4 * at.forcem();
+							}
+
+							//at.velocity() -= at.modepos()*omega2 * half_dt4;
+							//cout << "IntegrateV2 - 1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
+							//cout << "IntegrateV2 - 1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
+						}
+						else{
+							 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
+							 exit(1);
+							 return;
+						}
+					}
+
+					// half_dt2 centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
+
+						if(at.pib() == 1){
+
+							// Get the inner factor
+							real xi = 0.0;
+							for (std::vector<Particle*>::iterator it5 = atList.begin();
+										 it5 != atList.end(); ++it5) {
+								Particle &at2 = **it5;
+								if(at2.pib() != 1){
+									//real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter))*at2.velocity().sqr();
+
+									// VELOCITY APPROACH:
+									//real chi = Eigenvalues.at(at2.pib()-1)*at2.velocity().sqr();
+
+									// MOMENTUM APPROACH:
+									real chi = at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
+
+									// TEST
+									//real chi = test.sqr()/(Eigenvalues.at(at2.pib()-1));
+									// TEST
+
+									xi += chi;
+								}
+							}
+
+							// VELOCITY APPROACH ONLY:
+							//real dtfm = half_dt / (vp.mass());
+
+							// calculate distance to nearest adress particle or center
+							std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+							Real3D pa = **it2; // position of adress particle
+							Real3D mindriftforce(0.0, 0.0, 0.0);
+							//Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
+							//real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
+							verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
+							real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
+							++it2;
+							for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+								   pa = **it2;
+								   Real3D driftforce(0.0, 0.0, 0.0);
+								   //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+								   //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
+								   verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
+								   //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
+								   real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
+								   //std::cout << pa << " " << sqrt(distsq1) << "\n";
+								   if (distsq1 < min1sq) {
+										min1sq = distsq1;
+										mindriftforce = driftforce;
+								   }
+							}
+							min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
+							real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
+							//mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
+							//mindriftforceX *= 0.5;
+							//mindriftforceX *= 49.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+
+							//VELOCITY APPROACH:
+							//mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
+
+							// MOMENTUM APPROACH:
+							mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(ntrotter*vp.varmass()*vp.varmass());
+
+							//vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC
+
+							//mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
+							//vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
+							Real3D driftforceadd(mindriftforceX,0.0,0.0);
+
+							// DEBUG START
+							//if ((vp.lambda() < 0.9999) && (vp.lambda() > 0.0001)){
+								//cout << "Momentum based drift force: " << mindriftforceX << "\n";
+							//}
+							// DEBUG END
+
+							// X SPLIT VS SPHERE CHANGE
+							//Real3D driftforceadd(0.0,0.0,0.0);
+							//vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
+							//std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
+
+							//VELOCITY APPROACH:
+							//at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
+
+							// MOMENTUM APPROACH:
+							at.velocity() += half_dt * (at.forcem() - driftforceadd);
+
+
+							//TEST
+							//at.velocity() += half_dt * at.forcem();
+							//TEST
+
+							//cout << "IntegrateV2 - 2, at.forcem() - driftforceadd for pib " << at.pib() << ": " << at.forcem() - driftforceadd << "\n";
+
+							vp.velocity() = at.velocity();
+							break;
+
+						}
+						else if(at.pib() > 1 && at.pib() <= ntrotter){
+							continue;
+						}
+						else{
+							 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
+							 exit(1);
+							 return;
+						}
+					}
+
+					// Second half_dt4 loop without centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
+
+						if(at.pib() == 1){
+							continue;
+						}
+						else if(at.pib() > 1 && at.pib() <= ntrotter){
+							//real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+							//real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+
+							// VELOCITY APPROACH:
+							//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+							//at.velocity() += dtfm * at.forcem();
+
+							// MOMENTUM APPROACH:
+							if((at.pib() != 1) && (speedup == true) && (vp.lambda() < 0.000000001)){
+								continue;
+							}else{
+								at.velocity() += half_dt4 * at.forcem();
+							}
+
+							//at.velocity() -= at.modepos()*omega2 * half_dt4;
+							//cout << "at.forcem() II for bead " << at.pib() << ": " << at.forcem() << "\n\n";
+							//cout << "IntegrateV2 - 3, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
+							//cout << "IntegrateV2 - 3, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
+						}
+						else{
+							 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
+							 exit(1);
+							 return;
+						}
+					}
+
                 }
-                
-                // half_dt2 centroid mode
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
-                
-                    if(at.pib() == 1){
-                        
-                        // Get the inner factor
-                        real xi = 0.0;
-                        for (std::vector<Particle*>::iterator it5 = atList.begin();
-                                     it5 != atList.end(); ++it5) {
-                            Particle &at2 = **it5;
-                            if(at2.pib() != 1){
-                                //real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter))*at2.velocity().sqr();
+                else{ // constant kinetic mass - hence, no second decomposition level required
 
-                            	// VELOCITY APPROACH:
-                                //real chi = Eigenvalues.at(at2.pib()-1)*at2.velocity().sqr();
-
-                                // MOMENTUM APPROACH:
-                                real chi = at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
-
-                                xi += chi;
-                            }
-                        }
-                        
-                        // VELOCITY APPROACH ONLY:
-                        //real dtfm = half_dt / (vp.mass());
-                        
-                        // calculate distance to nearest adress particle or center
-                        std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
-                        Real3D pa = **it2; // position of adress particle
-                        Real3D mindriftforce(0.0, 0.0, 0.0);
-                        //Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
-                        //real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
-                        verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
-                        real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
-                        ++it2;
-                        for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-                               pa = **it2;
-                               Real3D driftforce(0.0, 0.0, 0.0);
-                               //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
-                               //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
-                               verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
-                               //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
-                               real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
-                               //std::cout << pa << " " << sqrt(distsq1) << "\n";
-                               if (distsq1 < min1sq) {
-                                    min1sq = distsq1;
-                                    mindriftforce = driftforce;
-                               }
-                        }
-                        min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
-                        real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
-                        //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
-                        //mindriftforceX *= 0.5;
-                        //mindriftforceX *= 49.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
-
-                        //VELOCITY APPROACH:
-                        //mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
+					// First half_dt4 loop without centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
 
 						// MOMENTUM APPROACH:
-                        mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(ntrotter*vp.varmass()*vp.varmass());
+						if((at.pib() != 1) && (speedup == true) && (vp.lambda() < 0.000000001)){
+							continue;
+						}else{
+							at.velocity() += half_dt * at.forcem();
+						}
+					}
 
-                        //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
-
-                        //mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
-                        //vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
-                        Real3D driftforceadd(mindriftforceX,0.0,0.0);
-
-                        // DEBUG START
-                        //if ((vp.lambda() < 0.9999) && (vp.lambda() > 0.0001)){
-                        	//cout << "Momentum based drift force: " << mindriftforceX << "\n";
-                        //}
-                        // DEBUG END
-
-                        // X SPLIT VS SPHERE CHANGE
-                        //Real3D driftforceadd(0.0,0.0,0.0);   
-                        //vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
-                        //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";                       
-                        
-                        //VELOCITY APPROACH:
-                        //at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
-
-                        // MOMENTUM APPROACH:
-                        at.velocity() += half_dt * (at.forcem() - driftforceadd);
-
-                        //cout << "IntegrateV2 - 2, at.forcem() - driftforceadd for pib " << at.pib() << ": " << at.forcem() - driftforceadd << "\n";
-                        
-                        vp.velocity() = at.velocity();
-                        break;
-                        
-                    }
-                    else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        continue;
-                    }
-                    else{
-                         std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
-                         exit(1);
-                         return;
-                    }
-                }
-                
-                // Second half_dt4 loop without centroid mode
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
-                
-                    if(at.pib() == 1){
-                        continue;
-                    }
-                    else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        //real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        //real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
-
-                    	// VELOCITY APPROACH:
-                    	//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
-                        //at.velocity() += dtfm * at.forcem();
-
-                    	// MOMENTUM APPROACH:
-                    	at.velocity() += half_dt4 * at.forcem();
-
-                        //at.velocity() -= at.modepos()*omega2 * half_dt4;
-                        //cout << "at.forcem() II for bead " << at.pib() << ": " << at.forcem() << "\n\n";
-                        //cout << "IntegrateV2 - 3, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
-                        //cout << "IntegrateV2 - 3, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
-                    }
-                    else{
-                         std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
-                         exit(1);
-                         return;
-                    }
                 }
                 
             }
@@ -880,99 +930,228 @@ namespace espressopp {
 
             Particle &vp = *cit;
 
-            real half_dt4 = 0.25 * dt / (vp.mass());
+            if (constkinmass == false){ // kinetic mass also changes - hence, second decomposition level required
 
-            FixedTupleListAdress::iterator it3;
-            it3 = fixedtupleList->find(&vp);
-            if (it3 != fixedtupleList->end()) {
-                std::vector<Particle*> atList;
-                atList = it3->second;
+				real half_dt4 = 0.25 * dt / (vp.mass());
 
-                // First half_dt4 loop with only centroid mode
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
+				FixedTupleListAdress::iterator it3;
+				it3 = fixedtupleList->find(&vp);
+				if (it3 != fixedtupleList->end()) {
+					std::vector<Particle*> atList;
+					atList = it3->second;
 
-                    if(at.pib() == 1){
-                    	at.modepos() += half_dt4 * at.velocity();
-                        break;
-                    }else{
-                    	continue;
-                    }
-                }
+					// First half_dt4 loop with only centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
 
-                // Update resolution and variable masses
-                // calculate distance to nearest adress particle or center
-                std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
-                Real3D pa = **it2; // position of adress particle
-                Real3D d1(0.0, 0.0, 0.0);
-                real min1sq;
-                //Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
-                verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
-                //real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
-                //real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-                //real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-                if (verletList->getAdrRegionType()) { // spherical adress region
-                  min1sq = d1.sqr(); // set min1sq before loop
-                  ++it2;
-                  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-                       pa = **it2;
-                       verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
-                       real distsq1 = d1.sqr();
-                       if (distsq1 < min1sq) min1sq = distsq1;
-                  }
-                }
-                else { //slab-type adress region
-                  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-                  ++it2;
-                  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-                       pa = **it2;
-                       //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
-                       //d1 = vp.position()[0] - pa[0];
-                       verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);        // X SPLIT VS SPHERE CHANGE
-                       //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
-                       real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
-                       if (distsq1 < min1sq) min1sq = distsq1;
-                  }
-                }
-                real w = weight(min1sq);
-                vp.lambda() = w;
-                real wDeriv = weightderivative(min1sq);
-                vp.lambdaDeriv() = wDeriv;
-                vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
+						if(at.pib() == 1){
+							at.modepos() += half_dt4 * at.velocity();
 
-                // half_dt2 loop without centroid mode
-                real half_dt = 0.5 * dt / (vp.varmass()*ntrotter);
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
+							// Update resolution and variable masses
+							// calculate distance to nearest adress particle or center
+							std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+							Real3D pa = **it2; // position of adress particle
+							Real3D d1(0.0, 0.0, 0.0);
+							real min1sq;
+							//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+							verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+							//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+							//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+							//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+							if (verletList->getAdrRegionType()) { // spherical adress region
+							  min1sq = d1.sqr(); // set min1sq before loop
+							  ++it2;
+							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+								   pa = **it2;
+								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+								   real distsq1 = d1.sqr();
+								   if (distsq1 < min1sq) min1sq = distsq1;
+							  }
+							}
+							else { //slab-type adress region
+							  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+							  ++it2;
+							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+								   pa = **it2;
+								   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+								   //d1 = vp.position()[0] - pa[0];
+								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);        // X SPLIT VS SPHERE CHANGE
+								   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+								   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+								   if (distsq1 < min1sq) min1sq = distsq1;
+							  }
+							}
+							real w = weight(min1sq);
+							vp.lambda() = w;
+							real wDeriv = weightderivative(min1sq);
+							vp.lambdaDeriv() = wDeriv;
+							vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
 
-                    if((at.pib() == 1) || ((speedup == true) && (vp.lambda() < 0.000000001) && (at.pib() != 1))){
-                        continue;
-                    }else{
-                        at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
-                    }
-                }
+							break;
+						}else{
+							continue;
+						}
+					}
 
-                // Second half_dt4 loop with only centroid mode
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
+//					// Update resolution and variable masses
+//					// calculate distance to nearest adress particle or center
+//					std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+//					Real3D pa = **it2; // position of adress particle
+//					Real3D d1(0.0, 0.0, 0.0);
+//					real min1sq;
+//					//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+//					verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
+//					//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+//					//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+//					//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+//					if (verletList->getAdrRegionType()) { // spherical adress region
+//					  min1sq = d1.sqr(); // set min1sq before loop
+//					  ++it2;
+//					  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+//						   pa = **it2;
+//						   verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);
+//						   real distsq1 = d1.sqr();
+//						   if (distsq1 < min1sq) min1sq = distsq1;
+//					  }
+//					}
+//					else { //slab-type adress region
+//					  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+//					  ++it2;
+//					  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+//						   pa = **it2;
+//						   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+//						   //d1 = vp.position()[0] - pa[0];
+//						   verletList->getSystem()->bc->getMinimumImageVector(d1, vp.position(), pa);        // X SPLIT VS SPHERE CHANGE
+//						   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+//						   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+//						   if (distsq1 < min1sq) min1sq = distsq1;
+//					  }
+//					}
+//					real w = weight(min1sq);
+//					vp.lambda() = w;
+//					real wDeriv = weightderivative(min1sq);
+//					vp.lambdaDeriv() = wDeriv;
+//					vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
 
-                    if(at.pib() == 1){
-                    	at.modepos() += half_dt4 * at.velocity();
-                        break;
-                    }else{
-                    	continue;
-                    }
-                }
+					//TEST
+					//vp.varmass() = vp.mass()/ntrotter;
+					//TEST
+
+					// half_dt2 loop without centroid mode
+					real half_dt = 0.5 * dt / (vp.varmass()*ntrotter);
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
+
+						if((at.pib() == 1) || ((speedup == true) && (vp.lambda() < 0.000000001) && (at.pib() != 1))){
+							continue;
+						}else{
+							at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
+						}
+					}
+
+					// Second half_dt4 loop with only centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
+
+						if(at.pib() == 1){
+							at.modepos() += half_dt4 * at.velocity();
+
+							// Update resolution and variable masses
+							// calculate distance to nearest adress particle or center
+							std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+							Real3D pa = **it2; // position of adress particle
+							Real3D d1(0.0, 0.0, 0.0);
+							real min1sq;
+							//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+							verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+							//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+							//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+							//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+							if (verletList->getAdrRegionType()) { // spherical adress region
+							  min1sq = d1.sqr(); // set min1sq before loop
+							  ++it2;
+							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+								   pa = **it2;
+								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+								   real distsq1 = d1.sqr();
+								   if (distsq1 < min1sq) min1sq = distsq1;
+							  }
+							}
+							else { //slab-type adress region
+							  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+							  ++it2;
+							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+								   pa = **it2;
+								   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+								   //d1 = vp.position()[0] - pa[0];
+								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);        // X SPLIT VS SPHERE CHANGE
+								   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+								   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+								   if (distsq1 < min1sq) min1sq = distsq1;
+							  }
+							}
+							real w = weight(min1sq);
+							vp.lambda() = w;
+							real wDeriv = weightderivative(min1sq);
+							vp.lambdaDeriv() = wDeriv;
+							vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
+
+							break;
+						}else{
+							continue;
+						}
+					}
+
+				}
+				else { // this should not happen
+					  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+					  std::cout << " (" << vp.position() << ")\n";
+					  exit(1);
+					  return;
+				}
 
             }
-            else { // this should not happen
-                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-                  std::cout << " (" << vp.position() << ")\n";
-                  exit(1);
-                  return;
+            else { // constant kinetic mass - hence, no second decomposition level required
+
+            	real half_dt = 0.5 * dt / (vp.mass());
+
+				FixedTupleListAdress::iterator it3;
+				it3 = fixedtupleList->find(&vp);
+				if (it3 != fixedtupleList->end()) {
+					std::vector<Particle*> atList;
+					atList = it3->second;
+
+					// First half_dt4 loop with only centroid mode
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
+
+						if(at.pib() == 1){
+							at.modepos() += half_dt * at.velocity();
+						}else if(at.pib() > 1 && at.pib() <= ntrotter){
+							if((speedup == true) && (vp.lambda() < 0.000000001)){
+								continue;
+							}else{
+								at.modepos() += half_dt * at.velocity() / (ntrotter * Eigenvalues.at(at.pib()-1));
+							}
+						}else{
+							std::cout << "at.pib() outside of trotter range in integrateModePos routine (VelocityVerletPI) \n";
+	                        exit(1);
+	                        return;
+						}
+					}
+
+				}
+				else { // this should not happen
+					  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+					  std::cout << " (" << vp.position() << ")\n";
+					  exit(1);
+					  return;
+				}
+
             }
         }
         
@@ -1018,7 +1197,12 @@ namespace espressopp {
                         //at.velocity() = prefac1 * at.velocity() + (prefac2/sqrt((vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1)))) * ranval;
 
                         // MOMENTUM APPROACH:
-                        at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        if(constkinmass == false){
+                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        }
+                        else{
+                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        }
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
@@ -1797,7 +1981,11 @@ namespace espressopp {
                             //esum += at.velocity().sqr() * (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
 
                             // MOMENTUM APPROACH:
-                            esum += at.velocity().sqr() / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        	if(constkinmass == false){
+                        		esum += at.velocity().sqr() / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        	}else{
+                        		esum += at.velocity().sqr() / (vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        	}
                         }
                     }
                     else{
@@ -2165,6 +2353,19 @@ namespace espressopp {
       speedup = _speedup;
     }
 
+    void VelocityVerletPI::setConstKinMass(bool _constkinmass)
+    {
+      /*if (_ntrotter == 0) {
+        System& system = getSystemRef();
+        esutil::Error err(system.comm);
+        std::stringstream msg;
+        msg << "ntrotter must be non-zero!";
+        err.setException(msg.str());
+      }*/
+
+    	constkinmass = _constkinmass;
+    }
+
     void VelocityVerletPI::setTemperature(real _temperature)
     {
       if (_temperature < 0.0) {
@@ -2326,6 +2527,7 @@ namespace espressopp {
         .def("setGamma", &VelocityVerletPI::setGamma)
 		.def("setClmassmultiplier", &VelocityVerletPI::setClmassmultiplier)
         .def("setSpeedup", &VelocityVerletPI::setSpeedup)
+		.def("setConstKinMass", &VelocityVerletPI::setConstKinMass)
         //.def("addEigenvectors", &VelocityVerletPI::setNtrotter)
         .def("setVerletList", &VelocityVerletPI::setVerletList)
         .def("setTimeStep", &VelocityVerletPI::setTimeStep)
@@ -2344,6 +2546,7 @@ namespace espressopp {
         .add_property("temperature", &VelocityVerletPI::getTemperature, &VelocityVerletPI::setTemperature)
         .add_property("gamma", &VelocityVerletPI::getGamma, &VelocityVerletPI::setGamma)
         .add_property("speedup", &VelocityVerletPI::getSpeedup, &VelocityVerletPI::setSpeedup)
+		.add_property("constkinmass", &VelocityVerletPI::getConstKinMass, &VelocityVerletPI::setConstKinMass)
         .add_property("verletList", &VelocityVerletPI::getVerletList, &VelocityVerletPI::setVerletList)
         ;
     }

@@ -96,6 +96,14 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
     def getSpeedup(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getSpeedup(self)
+
+    def setConstKinMass(self, bool):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setConstKinMass(self, bool)
+
+    def getConstKinMass(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getConstKinMass(self)
         
     def setVerletList(self, _verletlist):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -143,7 +151,7 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
           cls =  'espressopp.integrator.VelocityVerletPILocal',
-          pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'clmassmultiplier', 'speedup', 'verletList' ],
-          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setClmassmultiplier', 'setSpeedup', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeRingEnergyRaw', 'computeMomentumDrift', 'computePositionDrift'],
-          pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getClmassmultiplier', 'getSpeedup', 'getVerletList' ]
+          pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'clmassmultiplier', 'speedup', 'constkinmass', 'verletList' ],
+          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setClmassmultiplier', 'setSpeedup', 'setConstKinMass', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeRingEnergyRaw', 'computeMomentumDrift', 'computePositionDrift'],
+          pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getClmassmultiplier', 'getSpeedup', 'getConstKinMass', 'getVerletList' ]
         )
