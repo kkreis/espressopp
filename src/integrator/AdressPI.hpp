@@ -68,14 +68,10 @@ namespace espressopp {
 
         boost::signals2::connection _SetPosVel, _initForces, _setweights, /*_inIntP, _integrate2, _recalc2, _befIntV;*/  _aftCalcF;
         
-        //void integrate1(real&);
         void setweights();
-        //void setweights(real&);
         void initForces();
         void SetPosVel();
-        //void integrate2();
         void aftCalcF();
-        //void communicateAdrPositions();
 
         void connect();
         void disconnect();

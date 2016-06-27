@@ -148,24 +148,6 @@ namespace espressopp {
                                      return;
                           }
                   }
-                  // calculate distance from reference point
-                  //real dist3D = cit->getPos()[0] - center[0];                  // X SPLIT VS SPHERE CHANGE
-                  //Real3D dist3D = cit->getPos() - center;                    // X SPLIT VS SPHERE CHANGE
-
-
-                  // read fforce from table
-                  //real fforce = table->getForce(weight);
-                  //fforce = fforce /
-
-                  // add FEC force
-                  //cit->force()[0] += fforce;
-
-                  /*
-                  // use this if you need 1-dir force only!
-                  real d1 = cit->getPos()[0] - center[0];
-                  real force = table->getForce(d1);
-                  cit->force()[0] -= force;
-                  */
               }
               else{
                   std::cout << "ERROR: Using FEC Extension without providing table." << std::endl;
@@ -215,16 +197,6 @@ namespace espressopp {
     void FreeEnergyCompensation::registerPython() {
 
       using namespace espressopp::python;
-
-      //void (FreeEnergyCompensation::*pySetCenter)(real x, real y, real z)
-      //                  = &FreeEnergyCompensation::setCenter;
-
-      //void (FreeEnergyCompensation::*pyAddForce)(int itype, const char* filename, int type)
-      //                  = &FreeEnergyCompensation::addForce;
-
-      //real (FreeEnergyCompensation::*pyComputeCompEnergy)()
-      //                  = &FreeEnergyCompensation::computeCompEnergy;
-
       class_<FreeEnergyCompensation, shared_ptr<FreeEnergyCompensation>, bases<Extension> >
         ("integrator_FreeEnergyCompensation", init< shared_ptr<System>, int >())
         .add_property("filename", &FreeEnergyCompensation::getFilename)

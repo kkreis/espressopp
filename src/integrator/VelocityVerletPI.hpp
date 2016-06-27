@@ -45,39 +45,7 @@ namespace espressopp {
 
         shared_ptr<VerletListAdress> verletList;        
        
-        /* TODO should be removed after signals will be tested
-        void setLangevin(shared_ptr<class Langevin> langevin);
-        shared_ptr<class Langevin> getLangevin() { return langevin; }
-
-        void setStochasticVelocityRescaling(shared_ptr<class StochasticVelocityRescaling> stochasticVelocityRescaling);
-        shared_ptr<class StochasticVelocityRescaling> getStochasticVelocityRescaling() { return stochasticVelocityRescaling; }
-
-        void setIsokinetic(shared_ptr<class Isokinetic> isokinetic);
-        shared_ptr<class Isokinetic> getIsokinetic() { return isokinetic; }
-        
-        // set & get barostat (Berendsen)
-        void setBerendsenBarostat(shared_ptr<class BerendsenBarostat> berendsenBarostat);
-        shared_ptr<class BerendsenBarostat> getBerendsenBarostat() { return berendsenBarostat; }
-        
-        // set & get thermostat (Berendsen)
-        void setBerendsenThermostat(shared_ptr<class BerendsenThermostat> berendsenThermostat);
-        shared_ptr<class BerendsenThermostat> getBerendsenThermostat() { return berendsenThermostat; }
-        
-        // set & get barostat (Langevin-Hoover)
-        void setLangevinBarostat(shared_ptr<class LangevinBarostat> langevinBarostat);
-        shared_ptr<class LangevinBarostat> getLangevinBarostat() { return langevinBarostat; }
-        
-        // set & get FixPositions
-        void setFixPositions(shared_ptr <class FixPositions> _fixPositions);
-        shared_ptr<class FixPositions> getFixPositions () {return fixPositions; }
-        */
-
         void run(int nsteps);
-        
-        /** Load timings in array to export to Python as a tuple. */
-        //void loadTimers(real t[10]);
-
-        //void resetTimers();
 
         /** Setter routine for the fast TimeStep. */
         void setTimeStep(real _dt);
@@ -100,7 +68,7 @@ namespace espressopp {
         real getNtrotter() { return ntrotter; }
 
         void add(real val) { tmpvals.push_back(val); } // add particle id (called from python)
-        //void addEVs() { addEV(tmpvals); tmpvals.clear(); } // add tuple (called from python)
+
         void addEV() { Tvectors.push_back(tmpvals); tmpvals.clear();}
         
         void addValues(real val) { Eigenvalues.push_back(val); } // add particle id (called from python)
@@ -154,29 +122,6 @@ namespace espressopp {
         
         // Compute special kinetic energy
         real computeMomentumDrift(int parttype);
-        
-        // signal used for constraints
-        //boost::signals2::signal0 <void> saveOldPos;
-		//boost::signals2::signal0 <void> applyPosConst;
-		//boost::signals2::signal0 <void> applyVelConst;
-
-
-        /* -- moved to superclass
-        // signals to extend the integrator
-        boost::signals2::signal0 <void> runInit; // initialization of run()
-        boost::signals2::signal0 <void> recalc1; // inside recalc, before updateForces()
-        boost::signals2::signal0 <void> recalc2; // inside recalc, after  updateForces()
-        boost::signals2::signal0 <void> befIntP; // before integrate1()
-        boost::signals2::signal1 <void, real&> inIntP; // inside end of integrate1()
-        boost::signals2::signal0 <void> aftIntP; // after  integrate1()
-        boost::signals2::signal0 <void> aftInitF; // after initForces()
-        boost::signals2::signal0 <void> aftCalcF; // after calcForces()
-        boost::signals2::signal0 <void> befIntV; // before integrate2()
-        boost::signals2::signal0 <void> aftIntV; // after  integrate2()
-        */
-
-        //System& getSystem();
-
 
         /** Register this class so it can be used from Python. */
         static void registerPython();
@@ -186,10 +131,10 @@ namespace espressopp {
         int sStep; // medium time step = sStep * dt
         int mStep; // large time step = mStep * sStep * dt
         int ntrotter; // number of Trotter beads
-        bool resortFlag;  //!< true implies need for resort of particles
-        bool speedup; // Freeze rings in classical region?
-        bool KTI;
-        bool constkinmass; // Use a constant kinetic mass for all modes?
+        bool resortFlag;  // true implies need for resort of particles
+        bool speedup; // freeze rings in classical region?
+        bool KTI; // KTI-like simulation with constant and uniform resolution?
+        bool constkinmass; // Use a constant (real) kinetic mass for all modes?
         real maxDist;
         real dt2;
         real dt3;
@@ -209,43 +154,14 @@ namespace espressopp {
         
         real gamma;
         real temperature;
-
-        //shared_ptr<VerletListAdress> verletList;
         
         std::vector< std::vector<real> > Eigenvectors;
         std::vector< std::vector<real> > Tvectors;
         std::vector< real > Eigenvalues;
         
-        //real maxCut;
-        
         std::vector<real> tmpvals;
         
         shared_ptr< esutil::RNG > rng;
-        
-        //typedef std::vector<real> tuple;
-        //tuple tmpvals;
-        //void addEV(tuple vals); // add tuple
-        
-        /* TODO should be removed after signals will be tested
-        shared_ptr< class Langevin > langevin;  //!< Langevin thermostat if available
-        shared_ptr< class Isokinetic > isokinetic;  //!< Isokinetic thermostat if available
-        shared_ptr< class StochasticVelocityRescaling > stochasticVelocityRescaling;  //!< Stochastic velocity rescaling thermostat if available
-        shared_ptr< class BerendsenBarostat > berendsenBarostat;  //!< Berendsen barostat if available
-        shared_ptr< class BerendsenThermostat> berendsenThermostat;  //!< Berendsen thermostat if available
-        
-        shared_ptr< class LangevinBarostat > langevinBarostat;  //!< Langevin-Hoover barostat if available
-        
-        shared_ptr< class FixPositions > fixPositions; // fix positions of a group of particles
-        */
-
-        /** Method updates particle positions and velocities.
-            \return maximal square distance a particle has moved.
-        */
-
-
-        //real integrate1();
-
-        //void integrate2();
         
         void integrateV1(int t);
         void integrateV2();
@@ -256,8 +172,6 @@ namespace espressopp {
 
         void updateForces(int f);
 
-        //void calcForces();
-        
         void calcForcesF();
         void calcForcesM();
         void calcForcesS();
@@ -268,27 +182,6 @@ namespace espressopp {
         
         real weight(real distanceSqr);
         real weightderivative(real distanceSqr);
-
-        //void printPositions(bool withGhost);
-
-        //void printForces(bool withGhost);
-
-        //void setUp();   //!< set up for a new run
-
-        //void printTimers();
-
-        //esutil::WallTimer timeIntegrate;  //!< used for timing
-
-        // variables that keep time information about different phases
-        /*real timeRun;
-        real timeLost;
-        real timeForce;
-        real timeForceComp[100];
-        real timeComm1;
-        real timeComm2;
-        real timeInt1;
-        real timeInt2;
-        real timeResort;*/
 
         static LOG4ESPP_DECL_LOGGER(theLogger);
     };

@@ -59,7 +59,6 @@ namespace espressopp {
           if (! potential) {
                 LOG4ESPP_ERROR(theLogger, "NULL potential");
           }
-        //potentialArray = esutil::Array2D<Potential, esutil::enlarge>(0, 0, Potential());
       }
 
       virtual ~FixedTripleListPIadressInteractionTemplate() {};
@@ -88,10 +87,6 @@ namespace espressopp {
           speedup = _speedup;
       }
 
-      /*void
-      setPotential(int type1, int type2, const Potential &potential) {
-        potentialArray.at(type1, type2) = potential;
-      }*/
       void
       setPotential(shared_ptr < Potential> _potential) {
          if (_potential) {
@@ -100,10 +95,6 @@ namespace espressopp {
             LOG4ESPP_ERROR(theLogger, "NULL potential");
          }
       }
-
-      /*Potential &getPotential(int type1, int type2) {
-        return potentialArray.at(0, 0);
-      }*/
 
       shared_ptr < Potential > getPotential() {
         return potential;
@@ -127,7 +118,6 @@ namespace espressopp {
       bool speedup; // Choose whether to approximate rings in Classical region by single particles
       shared_ptr<FixedTripleList> fixedtripleList;
       shared_ptr<FixedTupleListAdress> fixedtupleList;
-      //esutil::Array2D<Potential, esutil::enlarge> potentialArray;
       shared_ptr < Potential > potential;
     };
 
@@ -137,7 +127,6 @@ namespace espressopp {
     template < typename _AngularPotential > inline void
     FixedTripleListPIadressInteractionTemplate <_AngularPotential>::
     addForces() {
-        //std::cout << "Adding Forces in FixedTripleListPIadressInteractionTemplate\n";
       LOG4ESPP_INFO(theLogger, "add forces computed by FixedTripleList");
       const bc::BC& bc = *getSystemRef().bc;  // boundary conditions
       for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it) {
@@ -145,7 +134,6 @@ namespace espressopp {
         Particle &p2 = *it->second;
         Particle &p3 = *it->third;
         
-        //weights 
         real w1 = p1.lambda();               
         real w2 = p2.lambda();        
         real w3 = p3.lambda();        
@@ -296,9 +284,6 @@ namespace espressopp {
                      p4.force() += force12;
                      p5.force() -= force12 + force32;
                      p6.force() += force32;                
-                     
-                     //std::cout << "FixedTriplet real force per bead: " << force12 <<"\n";
-                     //std::cout << "FixedTriplet real force per bead: " << force32 <<"\n";
                      
                      //Iterate the second and third iterator
                      ++itv2;
@@ -538,9 +523,6 @@ namespace espressopp {
                 Real3D force12, force32;
                 potential->_computeForce(force12, force32, dist12, dist32);
                 w += dist12 * force12 + dist32 * force32;
-                //p1.force() += force12;
-                //p2.force() -= force12 + force32;
-                //p3.force() += force32;
             }
             else{
                 // Get the corresponding tuples
@@ -597,9 +579,6 @@ namespace espressopp {
                          force12 *= 1.0/ntrotter;
                          force32 *= 1.0/ntrotter;
                          w += dist12 * force12 + dist32 * force32;
-                         //p4.force() += force12;
-                         //p5.force() -= force12 + force32;
-                         //p6.force() += force32;
 
                          //Iterate the second and third iterator
                          ++itv2;
@@ -674,12 +653,6 @@ namespace espressopp {
                      force12 *= 1.0/ntrotter;
                      force32 *= 1.0/ntrotter;
                      w += dist12 * force12 + dist32 * force32;
-                     //p4.force() += force12;
-                     //p5.force() -= force12 + force32;
-                     //p6.force() += force32;
-
-                     //std::cout << "FixedTriplet real force per bead: " << force12 <<"\n";
-                     //std::cout << "FixedTriplet real force per bead: " << force32 <<"\n";
 
                      //Iterate the second and third iterator
                      ++itv2;
@@ -700,21 +673,6 @@ namespace espressopp {
 
       }
         
-      /*const bc::BC& bc = *getSystemRef().bc;
-      real w = 0.0;
-      for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it) {
-        const Particle &p1 = *it->first;
-        const Particle &p2 = *it->second;
-        const Particle &p3 = *it->third;
-        //const Potential &potential = getPotential(p1.type(), p2.type());
-        const espressopp::bc::BC& bc = *getSystemRef().bc;
-        Real3D dist12, dist32;
-        bc.getMinimumImageVectorBox(dist12, p1.position(), p2.position());
-        bc.getMinimumImageVectorBox(dist32, p3.position(), p2.position());
-        Real3D force12, force32;
-        potential->_computeForce(force12, force32, dist12, dist32);
-        w += dist12 * force12 + dist32 * force32;
-      }*/
       real wsum;
       boost::mpi::all_reduce(*mpiWorld, w, wsum, std::plus<real>());
       return wsum;
@@ -727,26 +685,6 @@ namespace espressopp {
       std::cout << "Warning! At the moment computeVirialTensor in FixedTripleListPIadressInteractionTemplate does not work." << std::endl;
       exit(1);
       return;
-      
-      /*Tensor wlocal(0.0);
-      const bc::BC& bc = *getSystemRef().bc;
-      for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it){
-        const Particle &p1 = *it->first;
-        const Particle &p2 = *it->second;
-        const Particle &p3 = *it->third;
-        //const Potential &potential = getPotential(0, 0);
-        Real3D r12, r32;
-        bc.getMinimumImageVectorBox(r12, p1.position(), p2.position());
-        bc.getMinimumImageVectorBox(r32, p3.position(), p2.position());
-        Real3D force12, force32;
-        potential->_computeForce(force12, force32, r12, r32);
-        wlocal += Tensor(r12, force12) + Tensor(r32, force32);
-      }
-      
-      // reduce over all CPUs
-      Tensor wsum(0.0);
-      boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal,6, (double*)&wsum, std::plus<double>());
-      w += wsum;*/
     }
 
     template < typename _AngularPotential > inline void
@@ -756,34 +694,6 @@ namespace espressopp {
       std::cout << "Warning! At the moment IK computeVirialTensor in FixedTripleListPIadressInteractionTemplate does not work." << std::endl;
       exit(1);
       return;
-      
-      /*
-      Tensor wlocal(0.0);
-      const bc::BC& bc = *getSystemRef().bc;
-      for (FixedTripleList::TripleList::Iterator it(*fixedtripleList); it.isValid(); ++it){
-        const Particle &p1 = *it->first;
-        const Particle &p2 = *it->second;
-        const Particle &p3 = *it->third;
-        
-        Real3D p2pos = p2.position();
-        
-        if(  (p2pos[0]>xmin && p2pos[0]<xmax && 
-              p2pos[1]>ymin && p2pos[1]<ymax && 
-              p2pos[2]>zmin && p2pos[2]<zmax) ){
-          Real3D r12, r32;
-          bc.getMinimumImageVectorBox(r12, p1.position(), p2.position());
-          bc.getMinimumImageVectorBox(r32, p3.position(), p2.position());
-          Real3D force12, force32;
-          potential->_computeForce(force12, force32, r12, r32);
-          wlocal += Tensor(r12, force12) + Tensor(r32, force32);
-        }
-      }
-      
-      // reduce over all CPUs
-      Tensor wsum(0.0);
-      boost::mpi::all_reduce(*mpiWorld, (double*)&wlocal,6, (double*)&wsum, std::plus<double>());
-      w += wsum;
-       */
     }
     
     template < typename _AngularPotential > inline void
@@ -799,12 +709,6 @@ namespace espressopp {
     inline real
     FixedTripleListPIadressInteractionTemplate< _AngularPotential >::
     getMaxCutoff() {
-      /*real cutoff = 0.0;
-      for (int i = 0; i < ntypes; i++) {
-        for (int j = 0; j < ntypes; j++) {
-          cutoff = std::max(cutoff, getPotential(i, j).getCutoff());
-        }
-      }*/
       return potential->getCutoff();
     }
   }
