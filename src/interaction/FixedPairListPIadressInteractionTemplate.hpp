@@ -140,7 +140,7 @@ namespace espressopp {
         real w2 = p2.lambda(); 
         
         // Completely in classical region?
-        if ( (w1 < 0.000000001) && (w2 < 0.000000001) ) {
+        if ( (w1 == 0.0) && (w2 == 0.0) ) {
             
             if(speedup == true){
                 Real3D dist;
@@ -336,7 +336,7 @@ namespace espressopp {
         real w2 = p2.lambda(); 
         
         // Completely in classical region?
-        if ( (w1 < 0.000000001) && (w2 < 0.0000000011) ) {
+        if ( (w1 == 0.0) && (w2 == 0.0) ) {
             
             if(speedup == true){
                 Real3D r21;

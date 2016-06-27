@@ -151,7 +151,7 @@ namespace espressopp {
         real w3 = p3.lambda();        
         
         // Completely in classical region?
-        if ( (w1 < 0.000000001) && (w2 < 0.000000001) && (w3 < 0.000000001) ) {
+        if ((w1 == 0.0) && (w2 == 0.0) && (w3 == 0.0)) {
             
             if(speedup == true){
                 Real3D dist12, dist32;
@@ -338,7 +338,7 @@ namespace espressopp {
         real w3 = p3.lambda();        
         
         // Completely in classical region?
-        if ( (w1 < 0.000000001) && (w2 < 0.000000001) && (w3 < 0.000000001) ) {
+        if ( (w1 == 0.0) && (w2 == 0.0) && (w3 == 0.0) ) {
             
             if(speedup == true){
                 Real3D dist12 = bc.getMinimumImageVector(p1.position(), p2.position());

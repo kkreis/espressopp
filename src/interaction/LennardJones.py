@@ -36,6 +36,7 @@ from _espressopp import interaction_LennardJones, \
                       interaction_VerletListAdressLennardJones2, \
                       interaction_VerletListHadressLennardJones, \
                       interaction_VerletListHadressLennardJones2, \
+                      interaction_VerletListPIadressLennardJones, \
                       interaction_CellListLennardJones, \
                       interaction_FixedPairListLennardJones
 
@@ -126,6 +127,20 @@ class VerletListHadressLennardJones2Local(InteractionLocal, interaction_VerletLi
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotentialCG(self, type1, type2, potential)
 
+class VerletListPIadressLennardJonesLocal(InteractionLocal, interaction_VerletListPIadressLennardJones):
+    'The (local) Lennard Jones interaction using Verlet lists.'
+    def __init__(self, vl, fixedtupleList, ntrotter, speedup):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListPIadressLennardJones, vl, fixedtupleList, ntrotter, speedup)
+
+    def setPotentialQM(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialQM(self, type1, type2, potential)
+
+    def setPotentialCL(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialCL(self, type1, type2, potential)
+
 class CellListLennardJonesLocal(InteractionLocal, interaction_CellListLennardJones):
     'The (local) Lennard Jones interaction using cell lists.'
     def __init__(self, stor):
@@ -200,6 +215,13 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListHadressLennardJones2Local',
             pmicall = ['setPotentialAT', 'setPotentialCG']
+            )
+
+    class VerletListPIadressLennardJones(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListPIadressLennardJonesLocal',
+            pmicall = ['setPotentialQM', 'setPotentialCL']
             )
 
     class CellListLennardJones(Interaction):

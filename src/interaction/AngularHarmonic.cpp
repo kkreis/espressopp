@@ -23,12 +23,18 @@
 #include "python.hpp"
 #include "AngularHarmonic.hpp"
 #include "FixedTripleListInteractionTemplate.hpp"
+#include "FixedTripleListPIadressInteractionTemplate.hpp"
 
 namespace espressopp {
   namespace interaction {
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
     //////////////////////////////////////////////////
+  	typedef class FixedTripleListInteractionTemplate<AngularHarmonic>
+    	FixedTripleListAngularHarmonic;
+    typedef class FixedTripleListPIadressInteractionTemplate <AngularHarmonic>
+        FixedTripleListPIadressAngularHarmonic;
+
     void 
     AngularHarmonic::registerPython() {
       using namespace espressopp::python;
@@ -38,9 +44,6 @@ namespace espressopp {
 	.add_property("K", &AngularHarmonic::getK, &AngularHarmonic::setK)
 	.add_property("theta0", &AngularHarmonic::getTheta0, &AngularHarmonic::setTheta0)
     	;
-
-      typedef class FixedTripleListInteractionTemplate<AngularHarmonic>
-        FixedTripleListAngularHarmonic;
         
       class_ <FixedTripleListAngularHarmonic, bases <Interaction> >
         ("interaction_FixedTripleListAngularHarmonic",
@@ -50,6 +53,18 @@ namespace espressopp {
         .def(init< shared_ptr<System>, shared_ptr<FixedTripleListAdress>, shared_ptr<AngularHarmonic> >())
         .def("setPotential", &FixedTripleListAngularHarmonic::setPotential)
         .def("getFixedTripleList", &FixedTripleListAngularHarmonic::getFixedTripleList);
+
+
+      class_ <FixedTripleListPIadressAngularHarmonic, bases <Interaction> >
+          ("interaction_FixedTripleListPIadressAngularHarmonic",
+          init <shared_ptr<System>,
+                shared_ptr <FixedTripleList>,
+                shared_ptr<FixedTupleListAdress>,
+                shared_ptr <AngularHarmonic>,
+                int,
+                bool>())
+          .def("setPotential", &FixedTripleListPIadressAngularHarmonic::setPotential)
+          .def("getFixedTripleList", &FixedTripleListPIadressAngularHarmonic::getFixedTripleList);
       ;
     }
   }

@@ -150,7 +150,7 @@ namespace espressopp {
       int ntrotter; // Trotter number
       bool speedup; // Choose whether to approximate rings in Classical region by single particles
       // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to set to set up...
-      //std::map<Particle*, real> energydiff;  // Energydifference V_AA - V_CG map for particles in hybrid region for drift term calculation in H-AdResS
+      std::map<Particle*, real> energydiff;  // Energydifference V_AA - V_CG map for particles in hybrid region for drift term calculation in H-AdResS
       std::set<Particle*> adrZone;  // Virtual particles in AdResS zone (HY and AT region)
       std::set<Particle*> cgZone;
       
@@ -168,17 +168,17 @@ namespace espressopp {
       LOG4ESPP_INFO(theLogger, "add forces computed by the Verlet List");
  
       // Get the cg and the adrZones
-      //std::set<Particle*> cgZone = verletList->getCGZone();
-      //std::set<Particle*> adrZone = verletList->getAdrZone();
+      std::set<Particle*> cgZone = verletList->getCGZone();
+      std::set<Particle*> adrZone = verletList->getAdrZone();
 
       // Initialize the energy diff map to zero 
       // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to set to zero...
-      /*for (std::set<Particle*>::iterator it=adrZone.begin();
+      for (std::set<Particle*>::iterator it=adrZone.begin();
                     it != adrZone.end(); ++it) {
                   	Particle &p = **it;
                   	// intitialize energy diff AA-CG
                   	energydiff[&p]=0.0;
-      }*/
+      }
       
 
       // Pairs not inside the QM/Hybrid Zone (i.e. CL region)       
@@ -346,8 +346,9 @@ namespace espressopp {
                      }
                      
                      // Drift term WARNING - DOES NOT WORK CURRENTLY !!!
-                     /*if (w12 != 0.0) {   //at least one particle in hybrid region => need to do the energy calculation
+                     if (w12 != 0.0) {   //at least one particle in hybrid region => need to do the energy calculation
                         real energyvpcl = potentialCL._computeEnergy(p3, p4);
+                        //std::cout << "energyvpcl: " << energyvpcl << "\n";
                         if (w1 != 0.0) {   // if particle one is in hybrid region
                             energydiff[&p1] += energyvpcl;   // add CL energy for virtual particle 1
                         }
@@ -356,6 +357,7 @@ namespace espressopp {
                         }
                         
                         real energyvpqm = potentialQM._computeEnergy(p3, p4);
+                        //std::cout << "energyvpqm: " << energyvpqm << "\n";
                         if (w1 != 0.0) {   // if particle one is in hybrid region
                             energydiff[&p1] -= energyvpqm;   // add CL energy for virtual particle 1
                         }
@@ -364,12 +366,12 @@ namespace espressopp {
                         }
                         
                         // WARNING - DOES NOT WORK CURRENTLY !!!
-                          std::cout << "No Drift terms in VerletListPIadressInteractionTemplate. This feature does currently not work.\n";
+                          /*std::cout << "No Drift terms in VerletListPIadressInteractionTemplate. This feature does currently not work.\n";
                           exit(1);
-                          return;
+                          return;*/
                         // WARNING - DOES NOT WORK CURRENTLY !!!
                         
-                    }*/
+                    }
                      
                  }                 
                  else{   // both particles must be in the atomistic region now...
@@ -409,7 +411,7 @@ namespace espressopp {
       // PI-AdResS - Drift Term application
       // Iterate over all particles in the hybrid region and calculate drift force
       
-      /*for (std::set<Particle*>::iterator it=adrZone.begin();
+      for (std::set<Particle*>::iterator it=adrZone.begin();
         it != adrZone.end(); ++it) {   // Iterate over all particles
           Particle &vp = **it;
           real w = vp.lambda(); 
@@ -445,18 +447,24 @@ namespace espressopp {
               mindriftforceX *= 0.5;
               mindriftforceX *= energydiff.find(&vp)->second;   // get the energy differences which were calculated previously and put in drift force
                       
-              vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
+              /*if (mindriftforce[0] < 0.0){
+            	  vp.drift() -= mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC
+              }
+              else{
+            	  vp.drift() += mindriftforceX ;
+              }*/
               
               mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
               //vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
               Real3D driftforceadd(mindriftforceX,0.0,0.0);                                                                                            // X SPLIT VS SPHERE CHANGE
+              //std::cout << "mindriftforceX: " << mindriftforceX << "\n";
               //Real3D driftforceadd(0.0,0.0,0.0);   
               vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
               //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
               
           }
           
-      }*/
+      }
       
       
       // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to clear any map...

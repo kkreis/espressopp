@@ -30,7 +30,8 @@ from espressopp.esutil import *
 
 from espressopp.interaction.AngularPotential import *
 from espressopp.interaction.Interaction import *
-from _espressopp import interaction_AngularHarmonic, interaction_FixedTripleListAngularHarmonic
+from _espressopp import interaction_AngularHarmonic, interaction_FixedTripleListAngularHarmonic, \
+                      interaction_FixedTripleListPIadressAngularHarmonic
 
 class AngularHarmonicLocal(AngularPotentialLocal, interaction_AngularHarmonic):
     'The (local) AngularHarmonic potential.'
@@ -49,6 +50,16 @@ class FixedTripleListAngularHarmonicLocal(InteractionLocal, interaction_FixedTri
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotential(self, type1, type2, potential)
 
+class FixedTripleListPIadressAngularHarmonicLocal(InteractionLocal, interaction_FixedTripleListPIadressAngularHarmonic):
+    'The (local) tanulated angular interaction using FixedTriple lists.'
+    def __init__(self, system, vl, fixedtupleList, potential, ntrotter, speedup):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_FixedTripleListPIadressAngularHarmonic, system, vl, fixedtupleList, potential, ntrotter, speedup)
+
+    def setPotential(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
 if pmi.isController:
     class AngularHarmonic(AngularPotential):
         'The AngularHarmonic potential.'
@@ -61,5 +72,12 @@ if pmi.isController:
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedTripleListAngularHarmonicLocal',
+            pmicall = ['setPotential', 'getFixedTripleList']
+            )
+        
+    class FixedTripleListPIadressAngularHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedTripleListPIadressAngularHarmonicLocal',
             pmicall = ['setPotential', 'getFixedTripleList']
             )

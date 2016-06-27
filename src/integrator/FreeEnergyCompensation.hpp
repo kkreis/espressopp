@@ -44,8 +44,9 @@ namespace espressopp {
     class FreeEnergyCompensation : public Extension {
 
       public:
-        FreeEnergyCompensation(shared_ptr<System> system);
+        FreeEnergyCompensation(shared_ptr<System> system, int _ntrotter = 1);
         virtual ~FreeEnergyCompensation();
+        int ntrotter;
 
         /** Setter for the filename, will read in the table. */
         void addForce(int itype, const char* _filename, int type);

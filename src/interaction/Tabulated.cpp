@@ -22,6 +22,7 @@
 
 #include "python.hpp"
 #include "Tabulated.hpp"
+#include "LennardJones.hpp"
 #include "InterpolationLinear.hpp"
 #include "InterpolationAkima.hpp"
 #include "InterpolationCubic.hpp"
@@ -61,6 +62,7 @@ namespace espressopp {
     typedef class VerletListAdressInteractionTemplate <Tabulated, Tabulated> VerletListAdressTabulated;
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
     typedef class VerletListPIadressInteractionTemplate <Tabulated, Tabulated> VerletListPIadressTabulated;
+    typedef class VerletListPIadressInteractionTemplate <Tabulated, LennardJones> VerletListPIadressTabulatedLJ;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
     typedef class FixedPairListPIadressInteractionTemplate <Tabulated> FixedPairListPIadressTabulated;
@@ -111,6 +113,17 @@ namespace espressopp {
             .def("setPotentialQM", &VerletListPIadressTabulated::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressTabulated::setPotentialCL);
         ;
+
+      class_ <VerletListPIadressTabulatedLJ, bases <Interaction> >
+        ("interaction_VerletListPIadressTabulatedLJ",
+           init <shared_ptr<VerletListAdress>,
+                 shared_ptr<FixedTupleListAdress>,
+                 int,
+                 bool>()
+                )
+            .def("setPotentialQM", &VerletListPIadressTabulatedLJ::setPotentialQM)
+            .def("setPotentialCL", &VerletListPIadressTabulatedLJ::setPotentialCL);
+        ;
      
       class_ <CellListTabulated, bases <Interaction> > 
         ("interaction_CellListTabulated", init <shared_ptr <storage::Storage> >())
@@ -143,7 +156,6 @@ namespace espressopp {
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
-        
         
     }
     

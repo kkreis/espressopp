@@ -97,7 +97,8 @@ from espressopp.esutil import *
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
 from _espressopp import interaction_CoulombRSpace, \
-                      interaction_VerletListCoulombRSpace
+                      interaction_VerletListCoulombRSpace, \
+                      interaction_VerletListPIadressCoulombRSpace
 
 class CoulombRSpaceLocal(PotentialLocal, interaction_CoulombRSpace):
   
@@ -128,6 +129,20 @@ class VerletListCoulombRSpaceLocal(InteractionLocal, interaction_VerletListCoulo
     if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
       return self.cxxclass.getVerletList(self)
 
+class VerletListPIadressCoulombRSpaceLocal(InteractionLocal, interaction_VerletListPIadressCoulombRSpace):
+    'The (local) tabulated interaction using Verlet lists.'
+    def __init__(self, vl, fixedtupleList, ntrotter, speedup):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListPIadressCoulombRSpace, vl, fixedtupleList, ntrotter, speedup)
+
+    def setPotentialQM(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialQM(self, type1, type2, potential)        
+            
+    def setPotentialCL(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialCL(self, type1, type2, potential)
+            
 
 if pmi.isController:
   
@@ -138,3 +153,10 @@ if pmi.isController:
     __metaclass__ = pmi.Proxy
     pmiproxydefs = dict( cls = 'espressopp.interaction.VerletListCoulombRSpaceLocal',
     pmicall      = ['setPotential', 'getPotential', 'getVerletList'] )
+    
+  class VerletListPIadressCoulombRSpace(Interaction):
+    __metaclass__ = pmi.Proxy
+    pmiproxydefs = dict(
+        cls =  'espressopp.interaction.VerletListPIadressCoulombRSpaceLocal',
+        pmicall = ['setPotentialQM', 'setPotentialCL']
+        )

@@ -30,7 +30,8 @@ from espressopp.esutil import *
 
 from espressopp.interaction.Potential import *
 from espressopp.interaction.Interaction import *
-from _espressopp import interaction_Harmonic, interaction_FixedPairListHarmonic
+from _espressopp import interaction_Harmonic, interaction_FixedPairListHarmonic, \
+                      interaction_FixedPairListPIadressHarmonic
 
 class HarmonicLocal(PotentialLocal, interaction_Harmonic):
     'The (local) Harmonic potential.'
@@ -61,6 +62,16 @@ class FixedPairListHarmonicLocal(InteractionLocal, interaction_FixedPairListHarm
     def getFixedPairList(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getFixedPairList(self)
+        
+class FixedPairListPIadressHarmonicLocal(InteractionLocal, interaction_FixedPairListPIadressHarmonic):
+    'The (local) tabulated interaction using FixedPair PI lists.'
+    def __init__(self, system, vl, fixedtupleList, potential, ntrotter, speedup):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_FixedPairListPIadressHarmonic, system, vl, fixedtupleList, potential, ntrotter, speedup)
+
+    def setPotential(self, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, potential)
 
 if pmi.isController:
     class Harmonic(Potential):
@@ -75,4 +86,11 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.FixedPairListHarmonicLocal',
             pmicall = ['setPotential','getPotential','setFixedPairList','getFixedPairList']
+            )
+        
+    class FixedPairListPIadressHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.FixedPairListPIadressHarmonicLocal',
+            pmicall = ['setPotential', 'setFixedPairList', 'getFixedPairList']
             )

@@ -125,7 +125,12 @@ namespace espressopp {
         /** Setter routine for speedup. */
         void setSpeedup(bool _speedup);
         /** Getter routine for speedup. */
-        bool getSpeedup() { return speedup; }        
+        bool getSpeedup() { return speedup; }
+
+        /** Setter routine for KTI. */
+        void setKTI(bool _KTI);
+        /** Getter routine for KTI. */
+        bool getKTI() { return KTI; }
 
         /** Setter routine for speedup. */
         void setConstKinMass(bool _constkinmass);
@@ -145,10 +150,10 @@ namespace espressopp {
         real computeKineticEnergy();
 
         // Compute internal ring energies
-        real computePositionDrift();
+        real computePositionDrift(int parttype);
         
         // Compute special kinetic energy
-        real computeMomentumDrift();        
+        real computeMomentumDrift(int parttype);
         
         // signal used for constraints
         //boost::signals2::signal0 <void> saveOldPos;
@@ -183,6 +188,7 @@ namespace espressopp {
         int ntrotter; // number of Trotter beads
         bool resortFlag;  //!< true implies need for resort of particles
         bool speedup; // Freeze rings in classical region?
+        bool KTI;
         bool constkinmass; // Use a constant kinetic mass for all modes?
         real maxDist;
         real dt2;

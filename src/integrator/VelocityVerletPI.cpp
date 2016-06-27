@@ -64,6 +64,7 @@ namespace espressopp {
       ntrotter = 0;
       speedup = false;
       constkinmass = false;
+      KTI = false;
       sStep = 0;
       mStep = 0;
       omega2 = 0.0;
@@ -221,6 +222,8 @@ namespace espressopp {
       //DEBUG
       
       transPos2(); // Update mode positions.
+      // signal
+      //runInit();
 
       //DEBUG
         /*//System& system = getSystemRef();
@@ -619,6 +622,12 @@ namespace espressopp {
 						continue;
 					}else{
 						at.velocity() += half_dt * at.forcem();
+						if(at.pib() == 1)
+						{
+							// OTHER TRANSFORM WITHOUT SQRT(P)
+							//vp.velocity() = at.velocity();
+							vp.velocity() = (1.0/sqrt(ntrotter)) * at.velocity();
+						}
 					}
                     //cout << "Force in integrateV1(int t) with t = " << t << ". Force: " << at.force() << " Modeforce: " << at.forcem() << "\n";
                     
@@ -662,43 +671,50 @@ namespace espressopp {
                 	//TEST
 
 					// First half_dt4 loop without centroid mode
-					for (std::vector<Particle*>::iterator it2 = atList.begin();
-										   it2 != atList.end(); ++it2) {
-						Particle &at = **it2;
 
-						if(at.pib() == 1){
-							continue;
-						}
-						else if(at.pib() > 1 && at.pib() <= ntrotter){
-							//real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-							//real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                	if((speedup == false) || (vp.lambda() > 0.000000001)){
 
-							// VELOCITY APPROACH:
-							//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
-							//cout << "at.forcem() I for bead " << at.pib() << ": " << at.forcem() << "\n\n";
-							//at.velocity() += dtfm * at.forcem();
+						for (std::vector<Particle*>::iterator it2 = atList.begin();
+											   it2 != atList.end(); ++it2) {
+							Particle &at = **it2;
 
-							// MOMENTUM APPROACH:
-							if((speedup == true) && (vp.lambda() < 0.000000001)){
+							if(at.pib() == 1){
 								continue;
-							}else{
-								//TEST
-								//test = at.velocity();
-								//TEST
-
-								at.velocity() += half_dt4 * at.forcem();
 							}
+							else if(at.pib() > 1 && at.pib() <= ntrotter){
+								//real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+								//real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
 
-							//at.velocity() -= at.modepos()*omega2 * half_dt4;
-							//cout << "IntegrateV2 - 1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
-							//cout << "IntegrateV2 - 1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
+								// VELOCITY APPROACH:
+								//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+								//cout << "at.forcem() I for bead " << at.pib() << ": " << at.forcem() << "\n\n";
+								//at.velocity() += dtfm * at.forcem();
+
+								// MOMENTUM APPROACH:
+	//							if((speedup == true) && (vp.lambda() < 0.000000001)){
+	//								continue;
+	//							}else{
+									//TEST
+									//test = at.velocity();
+									//TEST
+
+									at.velocity() += half_dt4 * at.forcem();
+	//								cout << "momentum term 1:" << half_dt4 << "\n";
+	//								cout << "momentum term 1:" << 2.0 * half_dt4 * at.forcem()[1]/at.modepos()[1] << "\n";
+	//							}
+
+								//at.velocity() -= at.modepos()*omega2 * half_dt4;
+								//cout << "IntegrateV2 - 1, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
+								//cout << "IntegrateV2 - 1, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
+							}
+							else{
+								 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
+								 exit(1);
+								 return;
+							}
 						}
-						else{
-							 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
-							 exit(1);
-							 return;
-						}
-					}
+
+                	}
 
 					// half_dt2 centroid mode
 					for (std::vector<Particle*>::iterator it2 = atList.begin();
@@ -707,89 +723,102 @@ namespace espressopp {
 
 						if(at.pib() == 1){
 
-							// Get the inner factor
-							real xi = 0.0;
-							for (std::vector<Particle*>::iterator it5 = atList.begin();
-										 it5 != atList.end(); ++it5) {
-								Particle &at2 = **it5;
-								if(at2.pib() != 1){
-									//real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter))*at2.velocity().sqr();
+							if(vp.lambda()<1.0 && vp.lambda()>0.0){
 
-									// VELOCITY APPROACH:
-									//real chi = Eigenvalues.at(at2.pib()-1)*at2.velocity().sqr();
+								// Get the inner factor
+								real xi = 0.0;
+								for (std::vector<Particle*>::iterator it5 = atList.begin();
+											 it5 != atList.end(); ++it5) {
+									Particle &at2 = **it5;
+									if(at2.pib() != 1){
+										//real chi = 2.0*(1.0-cos(2.0*M_PI*(at2.pib()-1.0)/ntrotter))*at2.velocity().sqr();
 
-									// MOMENTUM APPROACH:
-									real chi = at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
+										// VELOCITY APPROACH:
+										//real chi = Eigenvalues.at(at2.pib()-1)*at2.velocity().sqr();
 
-									// TEST
-									//real chi = test.sqr()/(Eigenvalues.at(at2.pib()-1));
-									// TEST
+										// MOMENTUM APPROACH:
+										real chi = at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
 
-									xi += chi;
+										// TEST
+										//real chi = test.sqr()/(Eigenvalues.at(at2.pib()-1));
+										// TEST
+
+										xi += chi;
+									}
 								}
+
+								// VELOCITY APPROACH ONLY:
+								//real dtfm = half_dt / (vp.mass());
+
+								// calculate distance to nearest adress particle or center
+								std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+								Real3D pa = **it2; // position of adress particle
+								Real3D mindriftforce(0.0, 0.0, 0.0);
+								//Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
+								//real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
+								verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
+								real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
+								++it2;
+								for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+									   Real3D driftforce(0.0, 0.0, 0.0);
+									   //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+									   //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
+									   verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
+									   //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
+									   real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
+									   //std::cout << pa << " " << sqrt(distsq1) << "\n";
+									   if (distsq1 < min1sq) {
+											min1sq = distsq1;
+											mindriftforce = driftforce;
+									   }
+								}
+								min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
+								real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
+								//mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
+								//mindriftforceX *= 0.5;
+								//mindriftforceX *= 49.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+
+								//VELOCITY APPROACH:
+								//mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
+
+								// MOMENTUM APPROACH:
+
+								// OTHER TRANSFORM WITHOUT SQRT(P)
+								//mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(ntrotter*vp.varmass()*vp.varmass());
+								mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(vp.varmass()*vp.varmass()*sqrt(ntrotter));
+
+								//vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC
+
+								//mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
+								//vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
+								Real3D driftforceadd(mindriftforceX,0.0,0.0);
+
+								// DEBUG START
+								//if ((vp.lambda() < 0.9999) && (vp.lambda() > 0.0001)){
+									//cout << "Momentum based drift force: " << mindriftforceX << "\n";
+								//}
+								// DEBUG END
+
+								// X SPLIT VS SPHERE CHANGE
+								//Real3D driftforceadd(0.0,0.0,0.0);
+								//vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
+								//std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
+
+								//VELOCITY APPROACH:
+								//at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
+
+								// MOMENTUM APPROACH:
+								at.velocity() += half_dt * (at.forcem() - driftforceadd);
+
+								//TEST
+								//at.velocity() += half_dt * (at.forcem());
+								//TEST
+
 							}
-
-							// VELOCITY APPROACH ONLY:
-							//real dtfm = half_dt / (vp.mass());
-
-							// calculate distance to nearest adress particle or center
-							std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
-							Real3D pa = **it2; // position of adress particle
-							Real3D mindriftforce(0.0, 0.0, 0.0);
-							//Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
-							//real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
-							verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
-							real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
-							++it2;
-							for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-								   pa = **it2;
-								   Real3D driftforce(0.0, 0.0, 0.0);
-								   //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
-								   //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
-								   verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
-								   //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
-								   real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
-								   //std::cout << pa << " " << sqrt(distsq1) << "\n";
-								   if (distsq1 < min1sq) {
-										min1sq = distsq1;
-										mindriftforce = driftforce;
-								   }
+							else{
+								at.velocity() += half_dt * at.forcem();
 							}
-							min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
-							real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
-							//mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
-							//mindriftforceX *= 0.5;
-							//mindriftforceX *= 49.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
-
-							//VELOCITY APPROACH:
-							//mindriftforceX *= (clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*xi*vp.lambdaDeriv();
-
-							// MOMENTUM APPROACH:
-							mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(ntrotter*vp.varmass()*vp.varmass());
-
-							//vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC
-
-							//mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
-							//vp.force() += mindriftforce;   // add drift force to virtual particles                                                                    // X SPLIT VS SPHERE CHANGE
-							Real3D driftforceadd(mindriftforceX,0.0,0.0);
-
-							// DEBUG START
-							//if ((vp.lambda() < 0.9999) && (vp.lambda() > 0.0001)){
-								//cout << "Momentum based drift force: " << mindriftforceX << "\n";
-							//}
-							// DEBUG END
-
-							// X SPLIT VS SPHERE CHANGE
-							//Real3D driftforceadd(0.0,0.0,0.0);
-							//vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
-							//std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
-
-							//VELOCITY APPROACH:
-							//at.velocity() += dtfm * (at.forcem() - driftforceadd); // SIGN SWITCH TESTED, REMOVED !!!!
-
-							// MOMENTUM APPROACH:
-							at.velocity() += half_dt * (at.forcem() - driftforceadd);
-
 
 							//TEST
 							//at.velocity() += half_dt * at.forcem();
@@ -797,7 +826,9 @@ namespace espressopp {
 
 							//cout << "IntegrateV2 - 2, at.forcem() - driftforceadd for pib " << at.pib() << ": " << at.forcem() - driftforceadd << "\n";
 
-							vp.velocity() = at.velocity();
+							// OTHER TRANSFORM WITHOUT SQRT(P)
+							//vp.velocity() = at.velocity();
+							vp.velocity() = (1.0/sqrt(ntrotter)) * at.velocity();
 							break;
 
 						}
@@ -812,38 +843,45 @@ namespace espressopp {
 					}
 
 					// Second half_dt4 loop without centroid mode
-					for (std::vector<Particle*>::iterator it2 = atList.begin();
-										   it2 != atList.end(); ++it2) {
-						Particle &at = **it2;
 
-						if(at.pib() == 1){
-							continue;
-						}
-						else if(at.pib() > 1 && at.pib() <= ntrotter){
-							//real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-							//real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+					if((speedup == false) || (vp.lambda() > 0.000000001)){
 
-							// VELOCITY APPROACH:
-							//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
-							//at.velocity() += dtfm * at.forcem();
+						for (std::vector<Particle*>::iterator it2 = atList.begin();
+											   it2 != atList.end(); ++it2) {
+							Particle &at = **it2;
 
-							// MOMENTUM APPROACH:
-							if((at.pib() != 1) && (speedup == true) && (vp.lambda() < 0.000000001)){
+							if(at.pib() == 1){
 								continue;
-							}else{
-								at.velocity() += half_dt4 * at.forcem();
 							}
+							else if(at.pib() > 1 && at.pib() <= ntrotter){
+								//real dtfm = half_dt4 / (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
+								//real dtfm = half_dt4 / (vp.varmass()*Eigenvalues.at(at.pib()-1));
 
-							//at.velocity() -= at.modepos()*omega2 * half_dt4;
-							//cout << "at.forcem() II for bead " << at.pib() << ": " << at.forcem() << "\n\n";
-							//cout << "IntegrateV2 - 3, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
-							//cout << "IntegrateV2 - 3, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
+								// VELOCITY APPROACH:
+								//real dtfm = half_dt4 / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+								//at.velocity() += dtfm * at.forcem();
+
+								// MOMENTUM APPROACH:
+	//							if((at.pib() != 1) && (speedup == true) && (vp.lambda() < 0.000000001)){
+	//								continue;
+	//							}else{
+									at.velocity() += half_dt4 * at.forcem();
+	//								cout << "momentum term 2:" << half_dt4 << "\n";
+	//								cout << "momentum term 2:" << 2.0 * half_dt4 * at.forcem()[2]/at.modepos()[2] << "\n";;
+	//							}
+
+								//at.velocity() -= at.modepos()*omega2 * half_dt4;
+								//cout << "at.forcem() II for bead " << at.pib() << ": " << at.forcem() << "\n\n";
+								//cout << "IntegrateV2 - 3, at.forcem() for pib " << at.pib() << ": " << at.forcem() << "\n";
+								//cout << "IntegrateV2 - 3, dtfm * at.forcem() for pib " << at.pib() << ": " << dtfm * at.forcem() << "\n";
+							}
+							else{
+								 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
+								 exit(1);
+								 return;
+							}
 						}
-						else{
-							 std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
-							 exit(1);
-							 return;
-						}
+
 					}
 
                 }
@@ -859,6 +897,12 @@ namespace espressopp {
 							continue;
 						}else{
 							at.velocity() += half_dt * at.forcem();
+							if(at.pib() == 1)
+							{
+								// OTHER TRANSFORM WITHOUT SQRT(P)
+								//vp.velocity() = at.velocity();
+								vp.velocity() = (1.0/sqrt(ntrotter)) * at.velocity();
+							}
 						}
 					}
 
@@ -948,45 +992,62 @@ namespace espressopp {
 						if(at.pib() == 1){
 							at.modepos() += half_dt4 * at.velocity();
 
-							// Update resolution and variable masses
-							// calculate distance to nearest adress particle or center
-							std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
-							Real3D pa = **it2; // position of adress particle
-							Real3D d1(0.0, 0.0, 0.0);
-							real min1sq;
-							//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
-							verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
-							//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
-							//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-							//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-							if (verletList->getAdrRegionType()) { // spherical adress region
-							  min1sq = d1.sqr(); // set min1sq before loop
-							  ++it2;
-							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-								   pa = **it2;
-								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
-								   real distsq1 = d1.sqr();
-								   if (distsq1 < min1sq) min1sq = distsq1;
-							  }
+							//vp.position() = at.modepos();
+
+							if (KTI == false){
+								// Update resolution and variable masses
+								// calculate distance to nearest adress particle or center
+								std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+								Real3D pa = **it2; // position of adress particle
+								Real3D d1(0.0, 0.0, 0.0);
+								real min1sq;
+								//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+
+								// OTHER TRANSFORM WITHOUT SQRT(P)
+								//verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+								verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+								//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+								//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								if (verletList->getAdrRegionType()) { // spherical adress region
+								  min1sq = d1.sqr(); // set min1sq before loop
+								  ++it2;
+								  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+
+									   // OTHER TRANSFORM WITHOUT SQRT(P)
+									   //verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);    // X SPLIT VS SPHERE CHANGE
+									   verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+									   real distsq1 = d1.sqr();
+									   if (distsq1 < min1sq) min1sq = distsq1;
+								  }
+								}
+								else { //slab-type adress region
+								  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								  ++it2;
+								  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+									   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+									   //d1 = vp.position()[0] - pa[0];
+
+									   // OTHER TRANSFORM WITHOUT SQRT(P)
+									   //verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);    // X SPLIT VS SPHERE CHANGE
+									   verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+									   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+									   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+									   if (distsq1 < min1sq) min1sq = distsq1;
+								  }
+								}
+								real w = weight(min1sq);
+								vp.lambda() = w;
+								real wDeriv = weightderivative(min1sq);
+								vp.lambdaDeriv() = wDeriv;
+								//vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
+								vp.varmass() = vp.mass()*( w*(1.0-clmassmultiplier) + clmassmultiplier );
 							}
-							else { //slab-type adress region
-							  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-							  ++it2;
-							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-								   pa = **it2;
-								   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
-								   //d1 = vp.position()[0] - pa[0];
-								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);        // X SPLIT VS SPHERE CHANGE
-								   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
-								   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
-								   if (distsq1 < min1sq) min1sq = distsq1;
-							  }
-							}
-							real w = weight(min1sq);
-							vp.lambda() = w;
-							real wDeriv = weightderivative(min1sq);
-							vp.lambdaDeriv() = wDeriv;
-							vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
 
 							break;
 						}else{
@@ -1035,11 +1096,12 @@ namespace espressopp {
 //					vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
 
 					//TEST
-					//vp.varmass() = vp.mass()/ntrotter;
+					//vp.varmass() = vp.mass();
 					//TEST
 
 					// half_dt2 loop without centroid mode
-					real half_dt = 0.5 * dt / (vp.varmass()*ntrotter);
+					//real half_dt = 0.5 * dt / (vp.varmass()*ntrotter);         // OTHER TRANSFORM WITHOUT SQRT(P)
+					real half_dt = 0.5 * dt / vp.varmass();						 // OTHER TRANSFORM WITHOUT SQRT(P)
 					for (std::vector<Particle*>::iterator it2 = atList.begin();
 										   it2 != atList.end(); ++it2) {
 						Particle &at = **it2;
@@ -1047,7 +1109,10 @@ namespace espressopp {
 						if((at.pib() == 1) || ((speedup == true) && (vp.lambda() < 0.000000001) && (at.pib() != 1))){
 							continue;
 						}else{
+							//cout << "half_dt, 0.5 * dt: " << 0.5 * dt << "\n";
 							at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
+//							cout << "position term :" << half_dt * (vp.varmass()*ntrotter) << "\n";
+//							cout << "pos term" << omega2 * 0.5*dt* 0.5*dt * (Eigenvalues.at(at.pib()-1)) / half_dt << "\n";
 						}
 					}
 
@@ -1059,45 +1124,62 @@ namespace espressopp {
 						if(at.pib() == 1){
 							at.modepos() += half_dt4 * at.velocity();
 
-							// Update resolution and variable masses
-							// calculate distance to nearest adress particle or center
-							std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
-							Real3D pa = **it2; // position of adress particle
-							Real3D d1(0.0, 0.0, 0.0);
-							real min1sq;
-							//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
-							verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
-							//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
-							//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-							//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-							if (verletList->getAdrRegionType()) { // spherical adress region
-							  min1sq = d1.sqr(); // set min1sq before loop
-							  ++it2;
-							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-								   pa = **it2;
-								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
-								   real distsq1 = d1.sqr();
-								   if (distsq1 < min1sq) min1sq = distsq1;
-							  }
+							//vp.position() = at.modepos();
+
+							if (KTI == false){
+								// Update resolution and variable masses
+								// calculate distance to nearest adress particle or center
+								std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+								Real3D pa = **it2; // position of adress particle
+								Real3D d1(0.0, 0.0, 0.0);
+								real min1sq;
+								//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+
+								// OTHER TRANSFORM WITHOUT SQRT(P)
+								//verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+								verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+								//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+								//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								if (verletList->getAdrRegionType()) { // spherical adress region
+								  min1sq = d1.sqr(); // set min1sq before loop
+								  ++it2;
+								  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+
+									   // OTHER TRANSFORM WITHOUT SQRT(P)
+									   //verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);    // X SPLIT VS SPHERE CHANGE
+									   verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+									   real distsq1 = d1.sqr();
+									   if (distsq1 < min1sq) min1sq = distsq1;
+								  }
+								}
+								else { //slab-type adress region
+								  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								  ++it2;
+								  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+									   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+									   //d1 = vp.position()[0] - pa[0];
+
+									   // OTHER TRANSFORM WITHOUT SQRT(P)
+									   //verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);    // X SPLIT VS SPHERE CHANGE
+									   verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+									   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+									   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+									   if (distsq1 < min1sq) min1sq = distsq1;
+								  }
+								}
+								real w = weight(min1sq);
+								vp.lambda() = w;
+								real wDeriv = weightderivative(min1sq);
+								vp.lambdaDeriv() = wDeriv;
+								//vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
+								vp.varmass() = vp.mass()*( w*(1.0-clmassmultiplier) + clmassmultiplier );
 							}
-							else { //slab-type adress region
-							  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
-							  ++it2;
-							  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
-								   pa = **it2;
-								   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
-								   //d1 = vp.position()[0] - pa[0];
-								   verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);        // X SPLIT VS SPHERE CHANGE
-								   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
-								   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
-								   if (distsq1 < min1sq) min1sq = distsq1;
-							  }
-							}
-							real w = weight(min1sq);
-							vp.lambda() = w;
-							real wDeriv = weightderivative(min1sq);
-							vp.lambdaDeriv() = wDeriv;
-							vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
 
 							break;
 						}else{
@@ -1131,11 +1213,66 @@ namespace espressopp {
 
 						if(at.pib() == 1){
 							at.modepos() += half_dt * at.velocity();
+							//vp.position() = at.modepos();
+
+							if (KTI == false){
+								// Update resolution and variable masses
+								// calculate distance to nearest adress particle or center
+								std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
+								Real3D pa = **it2; // position of adress particle
+								Real3D d1(0.0, 0.0, 0.0);
+								real min1sq;
+								//Real3D d1 = vp.position() - pa;                                                      // X SPLIT VS SPHERE CHANGE
+
+								// OTHER TRANSFORM WITHOUT SQRT(P)
+								//verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+								verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+
+								//real d1 = vp.position()[0] - pa[0];                                                // X SPLIT VS SPHERE CHANGE
+								//real min1sq = d1.sqr();  // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								//real min1sq = d1*d1;   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								if (verletList->getAdrRegionType()) { // spherical adress region
+								  min1sq = d1.sqr(); // set min1sq before loop
+								  ++it2;
+								  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+									   // OTHER TRANSFORM WITHOUT SQRT(P)
+									   //verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);
+									   verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+									   real distsq1 = d1.sqr();
+									   if (distsq1 < min1sq) min1sq = distsq1;
+								  }
+								}
+								else { //slab-type adress region
+								  min1sq = d1[0]*d1[0];   // set min1sq before loop                                   // X SPLIT VS SPHERE CHANGE
+								  ++it2;
+								  for (; it2 != verletList->getAdrPositions().end(); ++it2) {
+									   pa = **it2;
+									   //d1 = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
+									   //d1 = vp.position()[0] - pa[0];
+									   // OTHER TRANSFORM WITHOUT SQRT(P)
+									   //verletList->getSystem()->bc->getMinimumImageVector(d1, at.modepos(), pa);        // X SPLIT VS SPHERE CHANGE
+									   verletList->getSystem()->bc->getMinimumImageVector(d1, (1.0/sqrt(ntrotter))*at.modepos(), pa);
+									   //real distsq1 = d1.sqr();                                                          // X SPLIT VS SPHERE CHANGE
+									   real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
+									   if (distsq1 < min1sq) min1sq = distsq1;
+								  }
+								}
+								real w = weight(min1sq);
+								vp.lambda() = w;
+								real wDeriv = weightderivative(min1sq);
+								vp.lambdaDeriv() = wDeriv;
+								//vp.varmass() = vp.mass()*( 1.0*w + clmassmultiplier*(1.0-w) );
+								vp.varmass() = vp.mass()*( w*(1.0-clmassmultiplier) + clmassmultiplier );
+							}
+
 						}else if(at.pib() > 1 && at.pib() <= ntrotter){
 							if((speedup == true) && (vp.lambda() < 0.000000001)){
 								continue;
 							}else{
-								at.modepos() += half_dt * at.velocity() / (ntrotter * Eigenvalues.at(at.pib()-1));
+								// OTHER TRANSFORM WITHOUT SQRT(P)
+								//at.modepos() += half_dt * at.velocity() / (ntrotter * Eigenvalues.at(at.pib()-1));
+								at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
 							}
 						}else{
 							std::cout << "at.pib() outside of trotter range in integrateModePos routine (VelocityVerletPI) \n";
@@ -1190,6 +1327,10 @@ namespace espressopp {
 
                         // MOMENTUM APPROACH:
                         at.velocity() = prefac1 * at.velocity() + prefac2*sqrt(vp.mass()) * ranval;
+
+                        // OTHER TRANSFORM WITHOUT SQRT(P)
+                        //vp.velocity() = at.velocity();
+						vp.velocity() = (1.0/sqrt(ntrotter)) * at.velocity();
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
@@ -1198,10 +1339,14 @@ namespace espressopp {
 
                         // MOMENTUM APPROACH:
                         if(constkinmass == false){
-                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        	// OTHER TRANSFORM WITHOUT SQRT(P)
+                        	//at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*Eigenvalues.at(at.pib()-1))) * ranval;
                         }
                         else{
-                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        	// OTHER TRANSFORM WITHOUT SQRT(P)
+                        	//at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1))) * ranval;
+                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.mass()*Eigenvalues.at(at.pib()-1))) * ranval;
                         }
                     }
                     else{
@@ -1337,7 +1482,7 @@ namespace espressopp {
 
                   Real3D oldpos = vp.position();
                   //cout << "oldpos: " << oldpos << "\n";
-                  
+
                   for (std::vector<Particle*>::iterator it3 = atList.begin();
                                        it3 != atList.end(); ++it3) {
                       Particle &at = **it3;
@@ -1352,17 +1497,26 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() <= ntrotter){
-                              at.position()+= sqrt(ntrotter)*at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
+                        	  // OTHER TRANSFORM WITHOUT SQRT(P)
+                              //at.position()+= sqrt(ntrotter)*at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
+                              at.position()+= at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
                               //at.position()+= at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
-                              
+
                               // Update VP particle (this thing is executed too often... but this shouldn't matter, might be fixed later)
                               if((at2.pib() == 1) && (at.pib() == 1)){
                                   //vp.position() = at.position();
                                   //vp.velocity() = at.velocity();
                             	  //cout << "vp.position()1: " << vp.position() << "\n";
-                                  vp.position() = at2.modepos();
+
+                            	  // OTHER TRANSFORM WITHOUT SQRT(P)
+                                  //vp.position() = at2.modepos();
+                                  vp.position() = (1.0/sqrt(ntrotter)) * at2.modepos();
+
                                   //cout << "vp.position()2: " << vp.position() << "\n";
-                                  vp.velocity() = at2.velocity();
+
+                                  // OTHER TRANSFORM WITHOUT SQRT(P)
+                                  //vp.velocity() = at2.velocity();
+                                  vp.velocity() = (1.0/sqrt(ntrotter)) * at2.velocity();
                               }
                           }
                           else{
@@ -1375,14 +1529,25 @@ namespace espressopp {
                       
                       //cout << "transPos1(), at.position() for pib: " << at.pib() << ", ghost: " << vp.ghost() << ", position: " << at.position() <<  ", modepos: " << at.modepos() << "\n";
                       
-                      //cout << "newpos: " << vp.position() << "\n";
-                      
                       //real sqDist = (oldpos-vp.position())*(oldpos-vp.position());   // !!!
                       //maxSqDist = std::max(maxSqDist, sqDist);     // !!!
                       //cout << "maxSqDist: " << maxSqDist << "\n"; 
 
                   }
                   
+                      /*// Compute center of mass
+                      Real3D cmp(0.0, 0.0, 0.0); // center of mass position
+                      Real3D cmv(0.0, 0.0, 0.0); // center of mass velocity
+                      //real M = vp.getMass(); // sum of mass of AT particles
+                      for (std::vector<Particle*>::iterator it2 = atList.begin();
+                                           it2 != atList.end(); ++it2) {
+                          Particle &at = **it2;
+                  cmp += at.position();
+                  }
+                  cmp /= ntrotter;
+                  cout << "cmp: " << cmp << "\n";
+                  cout << "vp.position(): " << vp.position() << "\n\n";/*
+
                   //DEBUGGING
                   /*if((vp.id() == 49201) || (vp.id() == 49202) || (vp.id() == 49203))
                   {
@@ -1454,7 +1619,9 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() <= ntrotter){
-                              at.modepos()+= sqrt(1.0/ntrotter)*at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                        	  // OTHER TRANSFORM WITHOUT SQRT(P)
+                              //at.modepos()+= sqrt(1.0/ntrotter)*at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                              at.modepos()+= at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
                               //at.modepos()+= at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
                               // MODE DEBUG
                               //cout << "Pib: " << at.pib() << ": " << Eigenvalues.at(at.pib()-1) << " and Eigenvector (component " << at2.pib()-1 << "): " << Eigenvectors.at(at.pib()-1).at(at2.pib()-1) << "\n";
@@ -1512,10 +1679,14 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() == 1){
-                              at.forcem()+= at2.force(); // + (1.0/ntrotter)*vp.force();   // Is the (1.0/ntrotter)*vp.force() correct?
+                        	  // OTHER TRANSFORM WITHOUT SQRT(P)
+                        	  at.forcem()+= (1.0/sqrt(ntrotter))* at2.force();
+                              //at.forcem()+= at2.force(); // + (1.0/ntrotter)*vp.force();   // Is the (1.0/ntrotter)*vp.force() correct?
                           }
                           else if(at.pib() > 1 && at.pib() <= ntrotter){
-                              at.forcem()+= sqrt(ntrotter)*at2.force()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                        	  // OTHER TRANSFORM WITHOUT SQRT(P)
+                        	  at.forcem()+= at2.force()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                              //at.forcem()+= sqrt(ntrotter)*at2.force()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
                           }
                           else{
                                std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
@@ -1637,11 +1808,15 @@ namespace espressopp {
 
                                   if(at.pib() > 1 && at.pib() <= ntrotter){
                                     //at.forcem() -= at.modepos()*omega2*vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter));
-                                    at.forcem() -= at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1);
+
+                                	// OTHER TRANSFORM WITHOUT SQRT(P)
+                                    //at.forcem() -= at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1);
+                                    at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues.at(at.pib()-1);
+
                                     //cout << "calcForcesF, at.forcem(): " << at.forcem() << " for at.modepos(): " << at.modepos() << "\n";
                                   }
                                   else if(at.pib() == 1){
-                                    if(vp.lambda()<0.999999999 && vp.lambda()>0.000000001){                          
+                                	  if(vp.lambda()<1.0 && vp.lambda()>0.0){
                                         real xi = 0.0;
                                         for (std::vector<Particle*>::iterator it5 = atList.begin();
                                                      it5 != atList.end(); ++it5) {
@@ -1651,7 +1826,10 @@ namespace espressopp {
                                                 //xi += -49.5*omega2*at2.modepos().sqr()*chi;
                                                 //xi += -49.5*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
                                             	//xi += -49.5*ntrotter*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
-                                            	xi += -1.0*(clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+
+                                            	// OTHER TRANSFORM WITHOUT SQRT(P)
+                                            	//xi += -0.5*(clmassmultiplier-1.0)*vp.lambdaDeriv()*ntrotter*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            	xi += -0.5*(clmassmultiplier-1.0)*(1.0/sqrt(ntrotter))*vp.lambdaDeriv()*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
                                             }
                                         }
 
@@ -1682,7 +1860,7 @@ namespace espressopp {
                                         real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
                                         //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
                                         //mindriftforceX *= 0.5;
-                                        mindriftforceX *= xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
+                                        mindriftforceX *= xi;   // get the energy differences which were calculated previously and put in drift force
 
                                         //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
@@ -1725,7 +1903,12 @@ namespace espressopp {
 
                               if(at.pib() > 1 && at.pib() <= ntrotter){
                                 //at.forcem() -= at.modepos()*omega2*vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter));
-                                at.forcem() -= at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1);
+
+                            	// OTHER TRANSFORM WITHOUT SQRT(P)
+                                //at.forcem() -= at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1);
+                            	//cout << "BEFORE: " << at.forcem() << "\n";
+                                at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues.at(at.pib()-1);
+                                //cout << "AFTER: " << at.forcem() << "\n\n";
 
                                 //cout << "Ring forces: " << at.modepos()*omega2*ntrotter*vp.varmass()*Eigenvalues.at(at.pib()-1) << "\n";
                                 //cout << "omega2: " << omega2 << "\n";
@@ -1736,7 +1919,8 @@ namespace espressopp {
                                 //cout << "at.forcem() for bead " << at.pib() << ": " << at.forcem() << "\n\n";
                               }
                               else if(at.pib() == 1){
-                                if(vp.lambda()<0.999999999 && vp.lambda()>0.000000001){                          
+                                if(vp.lambda()<1.0 && vp.lambda()>0.0)
+                                {
                                     real xi = 0.0;
                                     for (std::vector<Particle*>::iterator it5 = atList.begin();
                                                  it5 != atList.end(); ++it5) {
@@ -1778,7 +1962,11 @@ namespace espressopp {
                                     //mindriftforceX *= 0.5;
                                     //mindriftforceX *= -49.5*vp.mass()*omega2*xi*vp.lambdaDeriv();   // get the energy differences which were calculated previously and put in drift force
                                     //mindriftforceX *= -49.5*ntrotter*vp.mass()*omega2*xi*vp.lambdaDeriv();
-                                    mindriftforceX *= -1.0*(clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*omega2*xi*vp.lambdaDeriv();
+
+                                    // OTHER TRANSFORM WITHOUT SQRT(P)
+                                    //mindriftforceX *= -1.0*(clmassmultiplier-1.0)*0.5*ntrotter*vp.mass()*omega2*xi*vp.lambdaDeriv();
+                                    mindriftforceX *= -1.0*(clmassmultiplier-1.0)*0.5*vp.mass()*(1.0/sqrt(ntrotter))*omega2*xi*vp.lambdaDeriv();
+
                                     //vp.drift() += mindriftforceX ;//* vp.lambdaDeriv();    // USE ONLY LIKE THAT, IF DOING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC               
 
                                     //mindriftforceX *= vp.lambdaDeriv();  // multiplication with derivative of the weighting function
@@ -1982,9 +2170,18 @@ namespace espressopp {
 
                             // MOMENTUM APPROACH:
                         	if(constkinmass == false){
-                        		esum += at.velocity().sqr() / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+
+                        		//TEST
+                        		//esum += at.velocity().sqr() / (vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        		//TEST
+
+                        		// OTHER TRANSFORM WITHOUT SQRT(P)
+                        		//esum += at.velocity().sqr() / (vp.varmass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        		esum += at.velocity().sqr() / (vp.varmass()*Eigenvalues.at(at.pib()-1));
                         	}else{
-                        		esum += at.velocity().sqr() / (vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        		// OTHER TRANSFORM WITHOUT SQRT(P)
+                        		//esum += at.velocity().sqr() / (vp.mass()*ntrotter*Eigenvalues.at(at.pib()-1));
+                        		esum += at.velocity().sqr() / (vp.mass()*Eigenvalues.at(at.pib()-1));
                         	}
                         }
                     }
@@ -2043,7 +2240,14 @@ namespace espressopp {
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         //esum += at.modepos().sqr() * omega2 * (vp.varmass()*2.0*(1.0-cos(2.0*M_PI*(at.pib()-1.0)/ntrotter)));
-                        esum += at.modepos().sqr() * omega2 * ntrotter *  (vp.varmass()*Eigenvalues.at(at.pib()-1));
+
+                    	// OTHER TRANSFORM WITHOUT SQRT(P)
+                        //esum += at.modepos().sqr() * omega2 * ntrotter *  (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                        esum += at.modepos().sqr() * omega2 *  (vp.varmass()*Eigenvalues.at(at.pib()-1));
+
+                        //std::cout << "vp.varmass(): " << vp.varmass() << "\n";
+                        //std::cout << "at.modepos(): " << at.modepos() << "\n";
+                        //std::cout << "esum: " << esum << "\n";
                         //cout << "Ring Energy: vp.varmass(): " << vp.varmass() << "\n";
                     }
                     else{
@@ -2148,7 +2352,7 @@ namespace espressopp {
     }
 
 
-    real VelocityVerletPI::computeMomentumDrift()
+    real VelocityVerletPI::computeMomentumDrift(int parttype)
     {
         real esum = 0.0;
 
@@ -2160,43 +2364,52 @@ namespace espressopp {
 
             Particle &vp = *cit;
 
-            FixedTupleListAdress::iterator it3;
-            it3 = fixedtupleList->find(&vp);
-            if (it3 != fixedtupleList->end()) {
-                std::vector<Particle*> atList;
-                atList = it3->second;
+            //std::cout << "\nvp.type(): " << vp.type() << "\n";
+            //std::cout << "parttype: " << parttype << "\n\n";
 
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
+            if(vp.type() == parttype){
 
-                    if(at.pib() == 1){
-                        continue;
-                    }
-                    else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        //esum += 49.5*vp.mass()*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
-                    	//esum += 49.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+				FixedTupleListAdress::iterator it3;
+				it3 = fixedtupleList->find(&vp);
+				if (it3 != fixedtupleList->end()) {
+					std::vector<Particle*> atList;
+					atList = it3->second;
 
-						// VELOCITY APPROACH:
-                    	//esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
 
-                    	// MOMENTUM APPROACH:
-                    	esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(ntrotter*vp.varmass()*vp.varmass()*Eigenvalues.at(at.pib()-1));
-                    }
-                    else{
-                         std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
-                         exit(1);
-                         return 0.0;
-                    }
+						if(at.pib() == 1){
+							continue;
+						}
+						else if(at.pib() > 1 && at.pib() <= ntrotter){
+							//esum += 49.5*vp.mass()*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
+							//esum += 49.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
 
-                }
+							// VELOCITY APPROACH:
+							//esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.velocity().sqr()*Eigenvalues.at(at.pib()-1);
 
-            }
-            else { // this should not happen
-                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-                  std::cout << " (" << vp.position() << ")\n";
-                  exit(1);
-                  return 0.0;
+							// MOMENTUM APPROACH:
+							// OTHER TRANSFORM WITHOUT SQRT(P)
+							//esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(ntrotter*vp.varmass()*vp.varmass()*Eigenvalues.at(at.pib()-1));
+							esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(vp.varmass()*vp.varmass()*Eigenvalues.at(at.pib()-1));
+						}
+						else{
+							 std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
+							 exit(1);
+							 return 0.0;
+						}
+
+					}
+
+				}
+				else { // this should not happen
+					  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+					  std::cout << " (" << vp.position() << ")\n";
+					  exit(1);
+					  return 0.0;
+				}
+
             }
         }
 
@@ -2207,7 +2420,7 @@ namespace espressopp {
     }
 
 
-    real VelocityVerletPI::computePositionDrift()
+    real VelocityVerletPI::computePositionDrift(int parttype)
     {
         real esum = 0.0;
 
@@ -2219,41 +2432,49 @@ namespace espressopp {
 
             Particle &vp = *cit;
 
-            FixedTupleListAdress::iterator it3;
-            it3 = fixedtupleList->find(&vp);
-            if (it3 != fixedtupleList->end()) {
-                std::vector<Particle*> atList;
-                atList = it3->second;
+            if(vp.type() == parttype){
 
-                for (std::vector<Particle*>::iterator it2 = atList.begin();
-                                       it2 != atList.end(); ++it2) {
-                    Particle &at = **it2;
+				FixedTupleListAdress::iterator it3;
+				it3 = fixedtupleList->find(&vp);
+				if (it3 != fixedtupleList->end()) {
+					std::vector<Particle*> atList;
+					atList = it3->second;
 
-                    if(at.pib() == 1){
-                        continue;
-                    }
-                    else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        //esum -= 49.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
-                    	//esum -= 49.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
-                    	esum -= (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
-//                    	cout << "Pos. Drift: vp.mass(): " << 49.5*vp.mass() << "\n";
-//                    	cout << "Pos. Drift: " << 49.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1) << "\n";
-//                    	cout << "Ring Energy: " << at.modepos().sqr() * omega2 * ntrotter *  (vp.varmass()*Eigenvalues.at(at.pib()-1)) << "\n";
-                    }
-                    else{
-                         std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
-                         exit(1);
-                         return 0.0;
-                    }
+					for (std::vector<Particle*>::iterator it2 = atList.begin();
+										   it2 != atList.end(); ++it2) {
+						Particle &at = **it2;
 
-                }
+						if(at.pib() == 1){
+							continue;
+						}
+						else if(at.pib() > 1 && at.pib() <= ntrotter){
+							//esum -= 49.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+							//esum -= 49.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
 
-            }
-            else { // this should not happen
-                  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
-                  std::cout << " (" << vp.position() << ")\n";
-                  exit(1);
-                  return 0.0;
+							// OTHER TRANSFORM WITHOUT SQRT(P)
+//							esum -= (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+							esum -= (clmassmultiplier-1.0)*0.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+
+	//                    	cout << "Pos. Drift: vp.mass(): " << 49.5*vp.mass() << "\n";
+	//                    	cout << "Pos. Drift: " << 49.5*vp.mass()*ntrotter*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1) << "\n";
+	//                    	cout << "Ring Energy: " << at.modepos().sqr() * omega2 * ntrotter *  (vp.varmass()*Eigenvalues.at(at.pib()-1)) << "\n";
+						}
+						else{
+							 std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
+							 exit(1);
+							 return 0.0;
+						}
+
+					}
+
+				}
+				else { // this should not happen
+					  std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
+					  std::cout << " (" << vp.position() << ")\n";
+					  exit(1);
+					  return 0.0;
+				}
+
             }
         }
 
@@ -2266,8 +2487,8 @@ namespace espressopp {
 
     // AdResS Weighting function
     real VelocityVerletPI::weight(real distanceSqr){
-        if (dex2 > distanceSqr) return 1.0;
-        else if (dexdhy2 < distanceSqr) return 0.0;
+        if (dex2 >= distanceSqr) return 1.0;
+        else if (dexdhy2 <= distanceSqr) return 0.0;
         else {
             real argument = sqrt(distanceSqr) - dex;
             //return 1.0-(30.0/(pow(dhy, 5.0)))*(1.0/5.0*pow(argument, 5.0)-dhy/2.0*pow(argument, 4.0)+1.0/3.0*pow(argument, 3.0)*dhy*dhy);
@@ -2276,8 +2497,8 @@ namespace espressopp {
     }
     // AdResS Weight Derivative function
     real VelocityVerletPI::weightderivative(real distanceSqr){
-        if (dex2 > distanceSqr) return 0.0;
-        else if (dexdhy2 < distanceSqr) return 0.0;
+        if (dex2 >= distanceSqr) return 0.0;
+        else if (dexdhy2 <= distanceSqr) return 0.0;
         else{
             real argument = sqrt(distanceSqr) - dex;
             //return -(30.0/(pow(dhy, 5.0)))*(pow(argument, 4.0)-2.0*dhy*pow(argument, 3.0)+argument*argument*dhy*dhy);
@@ -2353,6 +2574,11 @@ namespace espressopp {
       speedup = _speedup;
     }
 
+    void VelocityVerletPI::setKTI(bool _KTI)
+    {
+      KTI = _KTI;
+    }
+
     void VelocityVerletPI::setConstKinMass(bool _constkinmass)
     {
       /*if (_ntrotter == 0) {
@@ -2381,6 +2607,7 @@ namespace espressopp {
       temperature = _temperature;
       //omega2 = ntrotter*temperature*temperature*kb*kb*Nav*1.66053892*pow(10.,-48)/(hbar*hbar*0.00831451*0.00831451);
       omega2 = ntrotter*temperature*temperature*kb*kb*Nav*1.66053892/(hbar*hbar*0.00831451*0.00831451*1000.0);
+      //cout << "omega2: " << omega2 << "\n";
     }
 
     void VelocityVerletPI::setGamma(real _gamma)
@@ -2527,6 +2754,7 @@ namespace espressopp {
         .def("setGamma", &VelocityVerletPI::setGamma)
 		.def("setClmassmultiplier", &VelocityVerletPI::setClmassmultiplier)
         .def("setSpeedup", &VelocityVerletPI::setSpeedup)
+        .def("setKTI", &VelocityVerletPI::setKTI)
 		.def("setConstKinMass", &VelocityVerletPI::setConstKinMass)
         //.def("addEigenvectors", &VelocityVerletPI::setNtrotter)
         .def("setVerletList", &VelocityVerletPI::setVerletList)
@@ -2546,6 +2774,7 @@ namespace espressopp {
         .add_property("temperature", &VelocityVerletPI::getTemperature, &VelocityVerletPI::setTemperature)
         .add_property("gamma", &VelocityVerletPI::getGamma, &VelocityVerletPI::setGamma)
         .add_property("speedup", &VelocityVerletPI::getSpeedup, &VelocityVerletPI::setSpeedup)
+        .add_property("KTI", &VelocityVerletPI::getKTI, &VelocityVerletPI::setKTI)
 		.add_property("constkinmass", &VelocityVerletPI::getConstKinMass, &VelocityVerletPI::setConstKinMass)
         .add_property("verletList", &VelocityVerletPI::getVerletList, &VelocityVerletPI::setVerletList)
         ;

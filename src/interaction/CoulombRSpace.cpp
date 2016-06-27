@@ -24,6 +24,7 @@
 #include "CoulombRSpace.hpp"
 #include "Tabulated.hpp"
 #include "VerletListInteractionTemplate.hpp"
+#include "VerletListPIadressInteractionTemplate.hpp"
 
 // currently just Verlet list
 
@@ -31,6 +32,7 @@ namespace espressopp {
   namespace interaction {
 
     typedef class VerletListInteractionTemplate <CoulombRSpace> VerletListCoulombRSpace;
+    typedef class VerletListPIadressInteractionTemplate <CoulombRSpace, CoulombRSpace> VerletListPIadressCoulombRSpace;
 
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
@@ -51,6 +53,17 @@ namespace espressopp {
         .def("setPotential", &VerletListCoulombRSpace::setPotential, return_value_policy< reference_existing_object >())
         .def("getPotential", &VerletListCoulombRSpace::getPotential, return_value_policy< reference_existing_object >())
       ;
+
+      class_ <VerletListPIadressCoulombRSpace, bases <Interaction> >
+        ("interaction_VerletListPIadressCoulombRSpace",
+           init <shared_ptr<VerletListAdress>,
+                 shared_ptr<FixedTupleListAdress>,
+                 int,
+                 bool>()
+                )
+            .def("setPotentialQM", &VerletListPIadressCoulombRSpace::setPotentialQM)
+            .def("setPotentialCL", &VerletListPIadressCoulombRSpace::setPotentialCL);
+        ;
     }
     
   }

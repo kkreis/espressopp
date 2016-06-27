@@ -33,9 +33,9 @@ from _espressopp import integrator_FreeEnergyCompensation
 
 class FreeEnergyCompensationLocal(ExtensionLocal, integrator_FreeEnergyCompensation):
     'The (local) Velocity Verlet Integrator.'
-    def __init__(self, system, center=[]):
+    def __init__(self, system, center=[], ntrotter = 1):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, integrator_FreeEnergyCompensation, system)
+            cxxinit(self, integrator_FreeEnergyCompensation, system, ntrotter)
             
             # set center of FreeEnergyCompensation force
             if (center != []):

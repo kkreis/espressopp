@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -38,8 +38,8 @@ namespace espressopp {
 
     LOG4ESPP_LOGGER(FreeEnergyCompensation::theLogger, "FreeEnergyCompensation");
 
-    FreeEnergyCompensation::FreeEnergyCompensation(shared_ptr<System> system)
-    :Extension(system) {
+    FreeEnergyCompensation::FreeEnergyCompensation(shared_ptr<System> system, int _ntrotter)
+    :Extension(system), ntrotter(_ntrotter) {
 
         type = Extension::FreeEnergyCompensation;
 
@@ -60,11 +60,11 @@ namespace espressopp {
     void FreeEnergyCompensation::disconnect(){
         _applyForce.disconnect();
     }
-    
-    
-    
-    
-    
+
+
+
+
+
 
 
     void FreeEnergyCompensation::addForce(int itype, const char* _filename, int type) {
@@ -102,19 +102,23 @@ namespace espressopp {
           FixedTupleListAdress::iterator it2;
           for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
 
-              Table table = forces.find(cit->getType())->second;                                       
+              Table table = forces.find(cit->getType())->second;
               if (table) {
-                  
+
                   Particle &vp = *cit;
-                  real weight = vp.lambda();  
+                  real weight = vp.lambda();
 
                   if (weight != 1.0 && weight != 0.0){
-                          real fforce = table->getForce(weight);                          
-                          real dist = vp.position()[0]-center[0];
-                          if ( dist >= 0.0 ) {dist = 1.0;}
-                          else {dist = -1.0;}
-                          fforce *=dist;
-                          
+                          real fforce = table->getForce(weight);
+                          real dist = vp.position()[0]-center[0];		// SLAB
+                          //Real3D dist3D = cit->getPos() - center;     // SPHERE
+                          if ( dist >= 0.0 ) {dist = 1.0;}				// SLAB
+                          else {dist = -1.0;}							// SLAB
+                          fforce *=dist;								// SLAB
+                          //real absdist3D = sqrt(dist3D.sqr());		// SPHERE
+                          //dist3D *= fforce;							// SPHERE
+                          //dist3D /= absdist3D;						// SPHERE
+
                           it2 = fixedtupleList->find(&vp);
                           if (it2 != fixedtupleList->end()) {  // Are there atomistic particles for given CG particle? If yes, use those for calculation.
                                 std::vector<Particle*> atList;
@@ -123,10 +127,18 @@ namespace espressopp {
                                                      it3 != atList.end(); ++it3) {
                                     Particle &at = **it3;
                                     //std::cout << "FEC Force: " << vp.lambdaDeriv() * at.mass() * fforce / vp.mass() << "\n";
-                                    
-                                    at.force()[0] += vp.lambdaDeriv() * at.mass() * fforce / vp.mass();  // USE NORMALLY!                                   
+
+                                    //TEST
+                                    //at.force()[0] += (1.0/sqrt(32.0)) * vp.lambdaDeriv() * fforce / 32.0;  // // PI, SLAB
+                                    //at.force()[0] +=vp.lambdaDeriv() * fforce / 32.0;  // // PI, SLAB
+                                    at.force()[0] +=vp.lambdaDeriv() * at.mass() * fforce / (ntrotter * vp.mass());
+                                    //TEST
+
+                                    // at.force()[0] += vp.lambdaDeriv() * at.mass() * fforce / vp.mass();  // USE NORMALLY!  // SLAB
+                                    //at.force() += vp.lambdaDeriv() * at.mass() * dist3D / vp.mass();  // USE NORMALLY!   // SPHERE
+
                                     //at.force()[0] += at.mass() * fforce / vp.mass();                   // USE IF USING ITERATIVE FEC INCLUDING ITERATIVE PRESSURE FEC!
-                                    
+
                                 }
                                 //vp.drift() += vp.lambdaDeriv() * fforce;
                           }
@@ -144,7 +156,7 @@ namespace espressopp {
                   // read fforce from table
                   //real fforce = table->getForce(weight);
                   //fforce = fforce /
-                  
+
                   // add FEC force
                   //cit->force()[0] += fforce;
 
@@ -158,15 +170,15 @@ namespace espressopp {
               else{
                   std::cout << "ERROR: Using FEC Extension without providing table." << std::endl;
                   exit(1);
-                  return;              
-              } 
-              
+                  return;
+              }
+
           }
     }
 
     real FreeEnergyCompensation::computeCompEnergy() {
           LOG4ESPP_DEBUG(theLogger, "compute Free Energy Compensation Energies");
-          
+
           real CompEnergy = 0.0;
           real CompEnergySum = 0.0;
           System& system = getSystemRef();
@@ -175,20 +187,20 @@ namespace espressopp {
           CellList cells = system.storage->getRealCells();
           for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
 
-              Table table = forces.find(cit->getType())->second;                                       
-              if (table) {                 
+              Table table = forces.find(cit->getType())->second;
+              if (table) {
                   Particle &vp = *cit;
-                  real weight = vp.lambda();  
-                  CompEnergy += table->getEnergy(weight);                               
+                  real weight = vp.lambda();
+                  CompEnergy += table->getEnergy(weight);
               }
               else{
                   std::cout << "ERROR: Using FEC Extension without providing table." << std::endl;
                   exit(1);
-                  return 0.0;              
-              } 
-           
+                  return 0.0;
+              }
+
           }
-          mpi::all_reduce(*getSystem()->comm, CompEnergy, CompEnergySum, std::plus<real>());          
+          mpi::all_reduce(*getSystem()->comm, CompEnergy, CompEnergySum, std::plus<real>());
           return CompEnergySum;
     }
 
@@ -209,12 +221,12 @@ namespace espressopp {
 
       //void (FreeEnergyCompensation::*pyAddForce)(int itype, const char* filename, int type)
       //                  = &FreeEnergyCompensation::addForce;
-      
+
       //real (FreeEnergyCompensation::*pyComputeCompEnergy)()
       //                  = &FreeEnergyCompensation::computeCompEnergy;
 
       class_<FreeEnergyCompensation, shared_ptr<FreeEnergyCompensation>, bases<Extension> >
-        ("integrator_FreeEnergyCompensation", init< shared_ptr<System> >())
+        ("integrator_FreeEnergyCompensation", init< shared_ptr<System>, int >())
         .add_property("filename", &FreeEnergyCompensation::getFilename)
         .def("connect", &FreeEnergyCompensation::connect)
         .def("disconnect", &FreeEnergyCompensation::disconnect)
