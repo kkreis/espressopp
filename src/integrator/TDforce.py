@@ -64,6 +64,10 @@ class TDforceLocal(integrator_TDforce):
             """
             if pmi.workerIsActive():
                 self.cxxclass.addForce(self, itype, filename, type)
+                
+    def computeTDEnergy(self):
+            if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+              return self.cxxclass.computeTDEnergy(self)
 
 if pmi.isController :
     class TDforce(object):
@@ -71,5 +75,5 @@ if pmi.isController :
         pmiproxydefs = dict(
             cls =  'espressopp.integrator.TDforceLocal',
             pmiproperty = [ 'itype', 'filename'],
-            pmicall = ['addForce']
+            pmicall = ['addForce' , 'computeTDEnergy']
             )

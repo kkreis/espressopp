@@ -62,9 +62,14 @@ namespace espressopp {
       temperature = 0.0;
       gamma = 0.0;
       ntrotter = 0;
+      CMDparameter = 1.0;
+      PILElambda = 0.5;
       speedup = false;
       constkinmass = false;
+      realkinmass = false;
       KTI = false;
+      centroidthermostat = true;
+      PILE = false;
       sStep = 0;
       mStep = 0;
       omega2 = 0.0;
@@ -94,6 +99,11 @@ namespace espressopp {
 
     void VelocityVerletPI::run(int nsteps)
     {
+    	/*std::cout << "PILE: " << PILE << "\n";
+    	std::cout << "realkinmass: " << realkinmass << "\n";
+    	std::cout << "centroidthermostat: " << centroidthermostat << "\n";
+    	std::cout << "CMDparameter: " << CMDparameter << "\n\n";*/
+
       // Check if Eigenvalues start with zero:
       if(Eigenvalues.at(0) > 0.00000000001){
         std::cout << "Eigenvalues don't start with zero!\n";
@@ -101,6 +111,12 @@ namespace espressopp {
         return;
       }
       
+      if(PILE == true && realkinmass == false){
+        std::cout << "Using the path integral Langevin scheme (PILE) only makes sense when using real masses for kinetic masses!\n";
+        exit(1);
+        return;
+      }
+
       System& system = getSystemRef();
       storage::Storage& storage = *system.storage;
       real skinHalf = 0.5 * system.getSkin();
@@ -340,8 +356,12 @@ namespace espressopp {
 											 it5 != atList.end(); ++it5) {
 									Particle &at2 = **it5;
 									if(at2.pib() != 1){
-										real chi = at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
-										xi += chi;
+										if(realkinmass == false){
+											xi += at2.velocity().sqr()/(Eigenvalues.at(at2.pib()-1));
+										}
+										else{
+											xi += at2.velocity().sqr();
+										}
 									}
 								}
 
@@ -371,7 +391,7 @@ namespace espressopp {
 								min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
 								real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
 
-								mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(vp.varmass()*vp.varmass()*sqrt(ntrotter));                                                              // X SPLIT VS SPHERE CHANGE
+								mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(vp.varmass()*vp.varmass()*sqrt(ntrotter)*CMDparameter);                                                              // X SPLIT VS SPHERE CHANGE
 								Real3D driftforceadd(mindriftforceX,0.0,0.0);
 
 								at.velocity() += half_dt * (at.forcem() - driftforceadd);
@@ -518,15 +538,21 @@ namespace espressopp {
 					}
 
 					// half_dt2 loop without centroid mode
-					real half_dt = 0.5 * dt / vp.varmass();
+					real half_dt = 0.5 * dt / (CMDparameter * vp.varmass());
 					for (std::vector<Particle*>::iterator it2 = atList.begin();
 										   it2 != atList.end(); ++it2) {
 						Particle &at = **it2;
 
 						if((at.pib() == 1) || ((speedup == true) && (vp.lambda() < 0.000000001) && (at.pib() != 1))){
 							continue;
-						}else{
-							at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
+						}
+						else{
+							if(realkinmass == false){
+								at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
+							}
+							else{
+								at.modepos() += half_dt * at.velocity();
+							}
 						}
 					}
 
@@ -648,7 +674,12 @@ namespace espressopp {
 							if((speedup == true) && (vp.lambda() < 0.000000001)){
 								continue;
 							}else{
-								at.modepos() += half_dt * at.velocity() / (Eigenvalues.at(at.pib()-1));
+								if(realkinmass == false){
+									at.modepos() += half_dt * at.velocity() / (CMDparameter * Eigenvalues.at(at.pib()-1));
+								}
+								else{
+									at.modepos() += half_dt * at.velocity() / CMDparameter;
+								}
 							}
 						}else{
 							std::cout << "at.pib() outside of trotter range in integrateModePos routine (VelocityVerletPI) \n";
@@ -697,17 +728,42 @@ namespace espressopp {
                     Particle &at = **it2;
                     
                     if(at.pib() == 1){
-                        Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
-                        at.velocity() = prefac1 * at.velocity() + prefac2*sqrt(vp.mass()) * ranval;
-						vp.velocity() = (1.0/sqrt(ntrotter)) * at.velocity();
+                    	if(centroidthermostat == true || vp.lambda() < 1.0){
+							Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
+							at.velocity() = prefac1 * at.velocity() + prefac2*sqrt(vp.mass()) * ranval;
+							vp.velocity() = (1.0/sqrt(ntrotter)) * at.velocity();
+                    	}
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
-                        if(constkinmass == false){
-                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.varmass()*Eigenvalues.at(at.pib()-1))) * ranval;
+                        if(PILE == false){
+							if(constkinmass == false){
+								if(realkinmass == false){
+									at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(CMDparameter*vp.varmass()*Eigenvalues.at(at.pib()-1))) * ranval;
+								}
+								else{
+									at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(CMDparameter*vp.varmass())) * ranval;
+								}
+							}
+							else{
+								if(realkinmass == false){
+									at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(CMDparameter*vp.mass()*Eigenvalues.at(at.pib()-1))) * ranval;
+								}
+								else{
+									at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(CMDparameter*vp.mass())) * ranval;
+								}
+							}
                         }
                         else{
-                        	at.velocity() = prefac1 * at.velocity() + (prefac2*sqrt(vp.mass()*Eigenvalues.at(at.pib()-1))) * ranval;
+                        	real modegamma = 2.0 * PILElambda * sqrt(omega2) * Eigenvalues.at(at.pib()-1);
+                        	real prefac1_PILE = exp(-modegamma*dt);
+                        	real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ));
+							if(constkinmass == false){
+								at.velocity() = prefac1_PILE * at.velocity() + (prefac2_PILE*sqrt(CMDparameter*vp.varmass())) * ranval;
+							}
+							else{
+								at.velocity() = prefac1_PILE * at.velocity() + (prefac2_PILE*sqrt(CMDparameter*vp.mass())) * ranval;
+							}
                         }
                     }
                     else{
@@ -1181,9 +1237,19 @@ namespace espressopp {
                             continue;
                         }else{
                         	if(constkinmass == false){
-                        		esum += at.velocity().sqr() / (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                        		if(realkinmass == false){
+                        			esum += at.velocity().sqr() / (vp.varmass()*CMDparameter*Eigenvalues.at(at.pib()-1));
+                        		}
+                        		else{
+                        			esum += at.velocity().sqr() / (vp.varmass()*CMDparameter);
+                        		}
                         	}else{
-                        		esum += at.velocity().sqr() / (vp.mass()*Eigenvalues.at(at.pib()-1));
+                        		if(realkinmass == false){
+                        			esum += at.velocity().sqr() / (vp.mass()*CMDparameter*Eigenvalues.at(at.pib()-1));
+                        		}
+                        		else{
+                        			esum += at.velocity().sqr() / (vp.mass()*CMDparameter);
+                        		}
                         	}
                         }
                     }
@@ -1354,7 +1420,12 @@ namespace espressopp {
 							continue;
 						}
 						else if(at.pib() > 1 && at.pib() <= ntrotter){
-							esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(vp.varmass()*vp.varmass()*Eigenvalues.at(at.pib()-1));
+							if(realkinmass == false){
+								esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(vp.varmass()*vp.varmass()*CMDparameter*Eigenvalues.at(at.pib()-1));
+							}
+							else{
+								esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.velocity().sqr()/(vp.varmass()*vp.varmass()*CMDparameter);
+							}
 						}
 						else{
 							 std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
@@ -1511,6 +1582,21 @@ namespace espressopp {
       KTI = _KTI;
     }
 
+    void VelocityVerletPI::setPILE(bool _PILE)
+    {
+      PILE = _PILE;
+    }
+
+    void VelocityVerletPI::setRealKinMass(bool _realkinmass)
+    {
+    	realkinmass = _realkinmass;
+    }
+
+    void VelocityVerletPI::setCentroidThermostat(bool _centroidthermostat)
+    {
+    	centroidthermostat = _centroidthermostat;
+    }
+
     void VelocityVerletPI::setConstKinMass(bool _constkinmass)
     {
     	constkinmass = _constkinmass;
@@ -1542,6 +1628,30 @@ namespace espressopp {
         err.setException(msg.str());
       }
       gamma = _gamma;
+    }
+
+    void VelocityVerletPI::setCMDparameter(real _CMDparameter)
+    {
+      if (_CMDparameter <= 0.0 || _CMDparameter > 1.0) {
+        System& system = getSystemRef();
+        esutil::Error err(system.comm);
+        std::stringstream msg;
+        msg << "CMDparameter must be larger than zero and smaller or equal one!";
+        err.setException(msg.str());
+      }
+      CMDparameter = _CMDparameter;
+    }
+
+    void VelocityVerletPI::setPILElambda(real _PILElambda)
+    {
+      if (_PILElambda < 0.0) {
+        System& system = getSystemRef();
+        esutil::Error err(system.comm);
+        std::stringstream msg;
+        msg << "PILElambda must be larger or equal than zero!";
+        err.setException(msg.str());
+      }
+      PILElambda = _PILElambda;
     }
 
     void VelocityVerletPI::setClmassmultiplier(real _clmassmultiplier)
@@ -1608,12 +1718,17 @@ namespace espressopp {
         .def("setNtrotter", &VelocityVerletPI::setNtrotter)
         .def("setTemperature", &VelocityVerletPI::setTemperature)
         .def("setGamma", &VelocityVerletPI::setGamma)
+		.def("setCMDparameter", &VelocityVerletPI::setCMDparameter)
+		.def("setPILElambda", &VelocityVerletPI::setPILElambda)
 		.def("setClmassmultiplier", &VelocityVerletPI::setClmassmultiplier)
         .def("setSpeedup", &VelocityVerletPI::setSpeedup)
         .def("setKTI", &VelocityVerletPI::setKTI)
+		.def("setCentroidThermostat", &VelocityVerletPI::setCentroidThermostat)
+		.def("setPILE", &VelocityVerletPI::setPILE)
+		.def("setRealKinMass", &VelocityVerletPI::setRealKinMass)
 		.def("setConstKinMass", &VelocityVerletPI::setConstKinMass)
         .def("setVerletList", &VelocityVerletPI::setVerletList)
-        .def("setTimeStep", &VelocityVerletPI::setTimeStep)
+        //.def("setTimeStep", &VelocityVerletPI::setTimeStep)
         .def("add", &VelocityVerletPI::add)
         .def("addEV", &VelocityVerletPI::addEV)
         .def("addValues", &VelocityVerletPI::addValues)
@@ -1628,8 +1743,13 @@ namespace espressopp {
         .add_property("ntrotter", &VelocityVerletPI::getNtrotter, &VelocityVerletPI::setNtrotter)
         .add_property("temperature", &VelocityVerletPI::getTemperature, &VelocityVerletPI::setTemperature)
         .add_property("gamma", &VelocityVerletPI::getGamma, &VelocityVerletPI::setGamma)
+		.add_property("CMDparameter", &VelocityVerletPI::getCMDparameter, &VelocityVerletPI::setCMDparameter)
+		.add_property("PILElambda", &VelocityVerletPI::getPILElambda, &VelocityVerletPI::setPILElambda)
         .add_property("speedup", &VelocityVerletPI::getSpeedup, &VelocityVerletPI::setSpeedup)
         .add_property("KTI", &VelocityVerletPI::getKTI, &VelocityVerletPI::setKTI)
+        .add_property("centroidthermostat", &VelocityVerletPI::getCentroidThermostat, &VelocityVerletPI::setCentroidThermostat)
+		.add_property("PILE", &VelocityVerletPI::getPILE, &VelocityVerletPI::setPILE)
+		.add_property("realkinmass", &VelocityVerletPI::getRealKinMass, &VelocityVerletPI::setRealKinMass)
 		.add_property("constkinmass", &VelocityVerletPI::getConstKinMass, &VelocityVerletPI::setConstKinMass)
         .add_property("verletList", &VelocityVerletPI::getVerletList, &VelocityVerletPI::setVerletList)
         ;

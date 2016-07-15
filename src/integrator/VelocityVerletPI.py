@@ -80,6 +80,22 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
     def getGamma(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getGamma(self)
+
+    def setCMDparameter(self, real):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setCMDparameter(self, real)
+
+    def getCMDparameter(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getCMDparameter(self)
+
+    def setPILElambda(self, real):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPILElambda(self, real)
+
+    def getPILElambda(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPILElambda(self)
         
     def setClmassmultiplier(self, real):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -104,6 +120,30 @@ class VelocityVerletPILocal(MDIntegratorLocal, integrator_VelocityVerletPI):
     def getKTI(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getKTI(self)
+
+    def setCentroidThermostat(self, bool):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setCentroidThermostat(self, bool)
+            
+    def getCentroidThermostat(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getCentroidThermostat(self)
+
+    def setPILE(self, bool):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPILE(self, bool)
+            
+    def getPILE(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPILE(self)
+
+    def setRealKinMass(self, bool):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setRealKinMass(self, bool)
+            
+    def getRealKinMass(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getRealKinMass(self)
 
     def setConstKinMass(self, bool):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
@@ -159,7 +199,7 @@ if pmi.isController :
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
           cls =  'espressopp.integrator.VelocityVerletPILocal',
-          pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'temperature', 'clmassmultiplier', 'speedup', 'KTI', 'constkinmass', 'verletList' ],
-          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setClmassmultiplier', 'setSpeedup', 'setKTI', 'setConstKinMass', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeRingEnergyRaw', 'computeMomentumDrift', 'computePositionDrift'],
-          pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getClmassmultiplier', 'getSpeedup', 'getKTI', 'getConstKinMass', 'getVerletList' ]
+          pmiproperty = [ 'sStep', 'mStep', 'ntrotter', 'gamma', 'CMDparameter', 'PILElambda', 'temperature', 'clmassmultiplier', 'speedup', 'KTI', 'constkinmass', 'verletList', 'centroidthermostat', 'PILE', 'realkinmass' ],
+          pmicall = ['resetTimers', 'setTimeStep', 'setmStep', 'setsStep', 'setNtrotter', 'setTemperature', 'setGamma', 'setCMDparameter', 'setPILElambda', 'setClmassmultiplier', 'setSpeedup', 'setKTI', 'setPILE', 'setRealKinMass', 'setCentroidThermostat', 'setConstKinMass', 'addEigenvectors', 'addEigenvalues', 'setVerletList', 'computeKineticEnergy', 'computeRingEnergy', 'computeRingEnergyRaw', 'computeMomentumDrift', 'computePositionDrift'],
+          pmiinvoke = ['getTimeStep', 'getTimers', 'getmStep', 'getsStep', 'getNtrotter', 'getTemperature', 'getGamma', 'getCMDparameter', 'getPILElambda', 'getClmassmultiplier', 'getSpeedup', 'getKTI', 'getPILE', 'getRealKinMass', 'getCentroidThermostat', 'getConstKinMass', 'getVerletList' ]
         )

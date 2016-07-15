@@ -56,6 +56,8 @@ namespace espressopp {
 
         void applyForce();
 
+        real computeTDEnergy();
+
         // should use centre from verletlistadress instead of setting the following info here in TDforce
         //void setCenter(real x, real y, real z); 
         //void setAdrRegionType(bool _sphereAdr); 

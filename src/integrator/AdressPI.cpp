@@ -66,11 +66,7 @@ namespace espressopp {
         _SetPosVel.disconnect();
         _initForces.disconnect();
         _setweights.disconnect();
-        //_integrate2.disconnect();
-        //_inIntP.disconnect();
         _aftCalcF.disconnect();
-        //_recalc2.disconnect();
-        //_befIntV.disconnect();
     }
 
     void AdressPI::connect() {

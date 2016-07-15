@@ -158,6 +158,54 @@ namespace espressopp {
           }
     }
 
+    real TDforce::computeTDEnergy() {
+          LOG4ESPP_DEBUG(theLogger, "compute Free Energy Compensation Energies");
+
+          real TDEnergy = 0.0;
+          real TDEnergySum = 0.0;
+          System& system = getSystemRef();
+          const bc::BC& bc = *getSystemRef().bc;
+
+          // iterate over CG particles
+          CellList cells = system.storage->getRealCells();
+          for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
+
+              Table table = forces.find(cit->getType())->second;
+              if (table) {
+
+
+                  if (!(verletList->getAdrCenterSet())) { //moving adress region
+//TODO if length(adrPositions) > 1 print warning (for the moment only works when there's only one particle in adrPositions)
+                    center=**(verletList->adrPositions.begin());
+                  }
+
+                  if (sphereAdr){ // spherical adress region
+                     // calculate distance from reference point
+                     Real3D dist3D;
+                     bc.getMinimumImageVectorBox(dist3D,cit->getPos(),center); //pos - center
+                     real dist = sqrt(dist3D.sqr());
+
+                     if (dist>0.0) {
+                       TDEnergy += table->getEnergy(dist);
+                     }
+                  } else {
+                     // use this if you need 1-dir force only!
+                     real d1 = cit->getPos()[0] - center[0];
+                     real d1abs = fabs(d1);
+                     TDEnergy += table->getEnergy(d1abs);
+                  }
+              }
+              else{
+                  std::cout << "ERROR: Using TD Extension without providing table." << std::endl;
+                  exit(1);
+                  return 0.0;
+              }
+
+          }
+          mpi::all_reduce(*getSystem()->comm, TDEnergy, TDEnergySum, std::plus<real>());
+          return TDEnergySum;
+    }
+
 
     //void TDforce::setCenter(real x, real y, real z){
     //        center = Real3D(x, y, z);
@@ -189,6 +237,7 @@ namespace espressopp {
         //.def("setCenter", pySetCenter)
         //.def("setAdrRegionType", pySetAdrRegionType)
         .def("addForce", pyAddForce)
+		.def("computeTDEnergy", &TDforce::computeTDEnergy)
         ;
     }
 

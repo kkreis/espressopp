@@ -84,10 +84,20 @@ namespace espressopp {
         void setGamma(real _gamma);
         /** Getter routine for gamma. */
         real getGamma() { return gamma; }
+
+        /** Setter routine for CMDparameter. */
+        void setCMDparameter(real _CMDparameter);
+        /** Getter routine for CMDparameter. */
+        real getCMDparameter() { return CMDparameter; }
+
+        /** Setter routine for CMDparameter. */
+        void setPILElambda(real _PILElambda);
+        /** Getter routine for CMDparameter. */
+        real getPILElambda() { return PILElambda; }
         
-        /** Setter routine for gamma. */
+        /** Setter routine for clmassmultiplier. */
         void setClmassmultiplier(real _clmassmultiplier);
-        /** Getter routine for gamma. */
+        /** Getter routine for clmassmultiplier. */
         real getClmassmultiplier() { return clmassmultiplier; }
 
         /** Setter routine for speedup. */
@@ -99,6 +109,21 @@ namespace espressopp {
         void setKTI(bool _KTI);
         /** Getter routine for KTI. */
         bool getKTI() { return KTI; }
+
+        /** Setter routine for centroidthermostat. */
+        void setCentroidThermostat(bool _centroidthermostat);
+        /** Getter routine for centroidthermostat. */
+        bool getCentroidThermostat() { return centroidthermostat; }
+
+        /** Setter routine for _PILE. */
+        void setPILE(bool _PILE);
+        /** Getter routine for _PILE. */
+        bool getPILE() { return PILE; }
+
+        /** Setter routine for _realkinmass. */
+        void setRealKinMass(bool _realkinmass);
+        /** Getter routine for _realkinmass. */
+        bool getRealKinMass() { return realkinmass; }
 
         /** Setter routine for speedup. */
         void setConstKinMass(bool _constkinmass);
@@ -135,6 +160,9 @@ namespace espressopp {
         bool speedup; // freeze rings in classical region?
         bool KTI; // KTI-like simulation with constant and uniform resolution?
         bool constkinmass; // Use a constant (real) kinetic mass for all modes?
+        bool realkinmass; // Use real masses for kinetic masses (useful especially in TRPMD)?
+        bool centroidthermostat; // Thermostat the centroid mode?
+        bool PILE; // PILE thermostating with different frictions for different modes (useful especially in TRPMD)? (Ceriotti et al, JCP 133, 124104 (2010))
         real maxDist;
         real dt2;
         real dt3;
@@ -152,6 +180,9 @@ namespace espressopp {
         real omega2;
         real clmassmultiplier;
         
+        real CMDparameter;
+        real PILElambda;
+
         real gamma;
         real temperature;
         

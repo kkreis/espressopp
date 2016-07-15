@@ -446,9 +446,7 @@ namespace espressopp {
           
       }
       
-      
-      // Drift term WARNING - DOES NOT WORK CURRENTLY !!! Hence no need to clear any map...
-      // energydiff.clear();  // clear the energy difference map                 
+      energydiff.clear();  // clear the energy difference map
       
     }
     
