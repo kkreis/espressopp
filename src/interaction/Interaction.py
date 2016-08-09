@@ -37,14 +37,20 @@ class InteractionLocal(object):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.computeEnergy(self)
 
-    def computeEnergyAA(self):
+    def computeEnergyAA(self, atomtype = None):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            return self.cxxclass.computeEnergyAA(self)
+            if atomtype is None:
+                return self.cxxclass.computeEnergyAA(self)
+            else:
+                return self.cxxclass.computeEnergyAA(self, atomtype)
 
-    def computeEnergyCG(self):
+    def computeEnergyCG(self, atomtype = None):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            return self.cxxclass.computeEnergyCG(self)
-
+            if atomtype is None:
+                return self.cxxclass.computeEnergyCG(self)
+            else:
+                return self.cxxclass.computeEnergyCG(self, atomtype)
+            
     def computeVirial(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.computeVirial(self)

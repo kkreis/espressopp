@@ -83,7 +83,9 @@ namespace espressopp {
       virtual void addForces();
       virtual real computeEnergy();
       virtual real computeEnergyAA();
-      virtual real computeEnergyCG();      
+      virtual real computeEnergyCG();
+      virtual real computeEnergyAA(int atomtype);
+      virtual real computeEnergyCG(int atomtype);
       virtual void computeVirialX(std::vector<real> &p_xx_total, int bins); 
       virtual real computeVirial();
       virtual void computeVirialTensor(Tensor& w);
@@ -168,11 +170,25 @@ namespace espressopp {
     
     template < typename _DihedralPotential > inline real
     FixedQuadrupleListInteractionTemplate < _DihedralPotential >::
+    computeEnergyAA(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyAA(int atomtype) in FixedQuadrupleListInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
+    template < typename _DihedralPotential > inline real
+    FixedQuadrupleListInteractionTemplate < _DihedralPotential >::
     computeEnergyCG() {
       std::cout << "Warning! At the moment computeEnergyCG() in FixedQuadrupleListInteractionTemplate does not work." << std::endl;
       return 0.0;
     }
     
+    template < typename _DihedralPotential > inline real
+    FixedQuadrupleListInteractionTemplate < _DihedralPotential >::
+    computeEnergyCG(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyCG(int atomtype) in FixedQuadrupleListInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
     template < typename _DihedralPotential >
     inline void
     FixedQuadrupleListInteractionTemplate < _DihedralPotential >::

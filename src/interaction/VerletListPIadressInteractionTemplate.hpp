@@ -125,6 +125,8 @@ namespace espressopp {
       virtual real computeEnergy();
       virtual real computeEnergyAA();
       virtual real computeEnergyCG();
+      virtual real computeEnergyAA(int atomtype);
+      virtual real computeEnergyCG(int atomtype);
       virtual void computeVirialX(std::vector<real> &p_xx_total, int bins); 
       virtual real computeVirial();
       virtual void computeVirialTensor(Tensor& w);
@@ -769,6 +771,169 @@ namespace espressopp {
       boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, e, esum, std::plus<real>());
       return esum;      
     }
+
+
+    template < typename _PotentialQM, typename _PotentialCL >
+    inline real
+    VerletListPIadressInteractionTemplate < _PotentialQM, _PotentialCL >::
+    computeEnergyAA(int atomtype) {
+      LOG4ESPP_INFO(theLogger, "compute total AA energy of the Verlet list pairs");
+
+      real e = 0.0;
+
+      for (PairList::Iterator it(verletList->getAdrPairs());
+           it.isValid(); ++it) {
+         Particle &p1 = *it->first;
+         Particle &p2 = *it->second;
+
+         if((p1.type() == atomtype) || (p2.type() == atomtype)){
+
+			 // Get the corresponding tuples
+			 FixedTupleListAdress::iterator it3;
+			 FixedTupleListAdress::iterator it4;
+			 it3 = fixedtupleList->find(&p1);
+			 it4 = fixedtupleList->find(&p2);
+
+			 if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+				 // Get the PI bead lists (i.e. the AdResS particles)
+				 std::vector<Particle*> atList1;
+				 std::vector<Particle*> atList2;
+				 atList1 = it3->second;
+				 atList2 = it4->second;
+
+				 // Iterate the two iterators in a parallel fashion
+				 std::vector<Particle*>::iterator itv2 = atList2.begin();
+				 for (std::vector<Particle*>::iterator itv = atList1.begin();
+						 itv != atList1.end(); ++itv) {
+
+					 // they should be the same length... Total Trotter beads the same everywhere in the system
+					 if (itv2 == atList2.end()){
+						 std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+						 p1.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+					 // Get the individual PI beads
+					 Particle &p3 = **itv;
+					 Particle &p4 = **itv2;
+
+					 // the beads we get should have the same Trotter bead number to interact with each other
+					 if (p3.pib() != p4.pib()){
+						 std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+						 p3.id() << " and " << p4.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+
+					 // Calculate QM energy
+					 const PotentialQM &potential = getPotentialQM(p3.type(), p4.type());
+
+					 if((p1.type() == atomtype) &&  (p2.type() == atomtype)){
+						 e += (1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+					 else{
+						 e += 0.5*(1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+					 //Iterate the second iterator
+					 ++itv2;
+
+				 }
+
+			 }
+			 else { // this should not happen
+				 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+						 p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+				 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+				 exit(1);
+				 return 0.0;
+			 }
+
+      	 }
+
+      }
+
+      for (PairList::Iterator it(verletList->getPairs());
+           it.isValid(); ++it) {
+         Particle &p1 = *it->first;
+         Particle &p2 = *it->second;
+
+         if((p1.type() == atomtype) || (p2.type() == atomtype)){
+
+			 // Get the corresponding tuples
+			 FixedTupleListAdress::iterator it3;
+			 FixedTupleListAdress::iterator it4;
+			 it3 = fixedtupleList->find(&p1);
+			 it4 = fixedtupleList->find(&p2);
+
+			 if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+				 // Get the PI bead lists (i.e. the AdResS particles)
+				 std::vector<Particle*> atList1;
+				 std::vector<Particle*> atList2;
+				 atList1 = it3->second;
+				 atList2 = it4->second;
+
+				 // Iterate the two iterators in a parallel fashion
+				 std::vector<Particle*>::iterator itv2 = atList2.begin();
+				 for (std::vector<Particle*>::iterator itv = atList1.begin();
+						 itv != atList1.end(); ++itv) {
+
+					 // they should be the same length... Total Trotter beads the same everywhere in the system
+					 if (itv2 == atList2.end()){
+						 std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+						 p1.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+					 // Get the individual PI beads
+					 Particle &p3 = **itv;
+					 Particle &p4 = **itv2;
+
+					 // the beads we get should have the same Trotter bead number to interact with each other
+					 if (p3.pib() != p4.pib()){
+						 std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+						 p3.id() << " and " << p4.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+
+					 // Calculate QM energy
+					 const PotentialQM &potential = getPotentialQM(p3.type(), p4.type());
+
+					 if((p1.type() == atomtype) &&  (p2.type() == atomtype)){
+						 e += (1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+					 else{
+						 e += 0.5*(1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+
+					 //Iterate the second iterator
+					 ++itv2;
+
+				 }
+
+			 }
+			 else { // this should not happen
+				 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+						 p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+				 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+				 exit(1);
+				 return 0.0;
+			 }
+
+         }
+
+      }
+
+      real esum;
+      boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, e, esum, std::plus<real>());
+      return esum;
+    }
    
     
     template < typename _PotentialQM, typename _PotentialCL >
@@ -914,6 +1079,170 @@ namespace espressopp {
       return esum;      
     }
     
+
+    template < typename _PotentialQM, typename _PotentialCL >
+    inline real
+    VerletListPIadressInteractionTemplate < _PotentialQM, _PotentialCL >::
+    computeEnergyCG(int atomtype) {
+      LOG4ESPP_INFO(theLogger, "compute total CG energy of the Verlet list pairs");
+
+      real e = 0.0;
+
+      for (PairList::Iterator it(verletList->getAdrPairs());
+           it.isValid(); ++it) {
+         Particle &p1 = *it->first;
+         Particle &p2 = *it->second;
+
+         if((p1.type() == atomtype) || (p2.type() == atomtype)){
+
+			 // Get the corresponding tuples
+			 FixedTupleListAdress::iterator it3;
+			 FixedTupleListAdress::iterator it4;
+			 it3 = fixedtupleList->find(&p1);
+			 it4 = fixedtupleList->find(&p2);
+
+			 if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+				 // Get the PI bead lists (i.e. the AdResS particles)
+				 std::vector<Particle*> atList1;
+				 std::vector<Particle*> atList2;
+				 atList1 = it3->second;
+				 atList2 = it4->second;
+
+				 // Iterate the two iterators in a parallel fashion
+				 std::vector<Particle*>::iterator itv2 = atList2.begin();
+				 for (std::vector<Particle*>::iterator itv = atList1.begin();
+						 itv != atList1.end(); ++itv) {
+
+					 // they should be the same length... Total Trotter beads the same everywhere in the system
+					 if (itv2 == atList2.end()){
+						 std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+						 p1.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+					 // Get the individual PI beads
+					 Particle &p3 = **itv;
+					 Particle &p4 = **itv2;
+
+					 // the beads we get should have the same Trotter bead number to interact with each other
+					 if (p3.pib() != p4.pib()){
+						 std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+						 p3.id() << " and " << p4.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+
+					 // Calculate QM energy
+					 const PotentialCL &potential = getPotentialCL(p3.type(), p4.type());
+
+					 if((p1.type() == atomtype) &&  (p2.type() == atomtype)){
+						 e += (1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+					 else{
+						 e += 0.5*(1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+
+					 //Iterate the second iterator
+					 ++itv2;
+
+				 }
+
+			 }
+			 else { // this should not happen
+				 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+						 p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+				 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+				 exit(1);
+				 return 0.0;
+			 }
+
+         }
+
+      }
+
+      for (PairList::Iterator it(verletList->getPairs());
+           it.isValid(); ++it) {
+         Particle &p1 = *it->first;
+         Particle &p2 = *it->second;
+
+         if((p1.type() == atomtype) || (p2.type() == atomtype)){
+
+			 // Get the corresponding tuples
+			 FixedTupleListAdress::iterator it3;
+			 FixedTupleListAdress::iterator it4;
+			 it3 = fixedtupleList->find(&p1);
+			 it4 = fixedtupleList->find(&p2);
+
+			 if (it3 != fixedtupleList->end() && it4 != fixedtupleList->end()) {
+
+				 // Get the PI bead lists (i.e. the AdResS particles)
+				 std::vector<Particle*> atList1;
+				 std::vector<Particle*> atList2;
+				 atList1 = it3->second;
+				 atList2 = it4->second;
+
+				 // Iterate the two iterators in a parallel fashion
+				 std::vector<Particle*>::iterator itv2 = atList2.begin();
+				 for (std::vector<Particle*>::iterator itv = atList1.begin();
+						 itv != atList1.end(); ++itv) {
+
+					 // they should be the same length... Total Trotter beads the same everywhere in the system
+					 if (itv2 == atList2.end()){
+						 std::cout << "Tuplelists seem to have different lengths or not started properly. Corresponding to CG particle " <<
+						 p1.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+					 // Get the individual PI beads
+					 Particle &p3 = **itv;
+					 Particle &p4 = **itv2;
+
+					 // the beads we get should have the same Trotter bead number to interact with each other
+					 if (p3.pib() != p4.pib()){
+						 std::cout << "Path Integral Beads numbers do not correspond in VerletListPIadressInteractionTemplate for particles " <<
+						 p3.id() << " and " << p4.id() << "\n";
+						 exit(1);
+						 return 0.0;
+					 }
+
+
+					 // Calculate QM energy
+					 const PotentialCL &potential = getPotentialCL(p3.type(), p4.type());
+
+					 if((p1.type() == atomtype) &&  (p2.type() == atomtype)){
+						 e += (1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+					 else{
+						 e += 0.5*(1.0/ntrotter)*potential._computeEnergy(p3, p4);
+					 }
+
+					 //Iterate the second iterator
+					 ++itv2;
+
+				 }
+
+			 }
+			 else { // this should not happen
+				 std::cout << " one of the VP particles not found in tuples: " << p1.id() << "-" <<
+						 p1.ghost() << ", " << p2.id() << "-" << p2.ghost();
+				 std::cout << " (" << p1.position() << ") (" << p2.position() << ")\n";
+				 exit(1);
+				 return 0.0;
+			 }
+
+         }
+
+      }
+
+      real esum;
+      boost::mpi::all_reduce(*getVerletList()->getSystem()->comm, e, esum, std::plus<real>());
+      return esum;
+    }
+
 
     template < typename _PotentialQM, typename _PotentialCL > inline void
     VerletListPIadressInteractionTemplate < _PotentialQM, _PotentialCL >::

@@ -103,7 +103,9 @@ namespace espressopp {
       virtual void addForces();
       virtual real computeEnergy();
       virtual real computeEnergyAA();
-      virtual real computeEnergyCG();      
+      virtual real computeEnergyCG();
+      virtual real computeEnergyAA(int atomtype);
+      virtual real computeEnergyCG(int atomtype);
       virtual void computeVirialX(std::vector<real> &p_xx_total, int bins); 
       virtual real computeVirial();
       virtual void computeVirialTensor(Tensor& w);
@@ -480,8 +482,24 @@ namespace espressopp {
     
     template < typename _AngularPotential > inline real
     FixedTripleListPIadressInteractionTemplate < _AngularPotential >::
+    computeEnergyAA(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyAA(int atomtype) in FixedTripleListPIadressInteractionTemplate does not work." << std::endl;
+      exit(1);
+      return 0.0;
+    }
+
+    template < typename _AngularPotential > inline real
+    FixedTripleListPIadressInteractionTemplate < _AngularPotential >::
     computeEnergyCG() {
       std::cout << "Warning! At the moment computeEnergyCG() in FixedTripleListPIadressInteractionTemplate does not work." << std::endl;
+      exit(1);
+      return 0.0;
+    }
+
+    template < typename _AngularPotential > inline real
+    FixedTripleListPIadressInteractionTemplate < _AngularPotential >::
+    computeEnergyCG(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyCG(int atomtype) in FixedTripleListPIadressInteractionTemplate does not work." << std::endl;
       exit(1);
       return 0.0;
     }

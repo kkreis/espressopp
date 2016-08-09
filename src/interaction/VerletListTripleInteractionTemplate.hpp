@@ -79,7 +79,9 @@ namespace espressopp {
       virtual void addForces();
       virtual real computeEnergy();
       virtual real computeEnergyAA();
-      virtual real computeEnergyCG();      
+      virtual real computeEnergyCG();
+      virtual real computeEnergyAA(int atomtype);
+      virtual real computeEnergyCG(int atomtype);
       virtual void computeVirialX(std::vector<real> &p_xx_total, int bins); 
       virtual real computeVirial();
       virtual void computeVirialTensor(Tensor& w);
@@ -161,11 +163,25 @@ namespace espressopp {
     
     template < typename _ThreeBodyPotential > inline real
     VerletListTripleInteractionTemplate < _ThreeBodyPotential >::
+    computeEnergyAA(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyAA(int atomtype) in VerletListTripleInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
+    template < typename _ThreeBodyPotential > inline real
+    VerletListTripleInteractionTemplate < _ThreeBodyPotential >::
     computeEnergyCG() {
       std::cout << "Warning! At the moment computeEnergyCG() in VerletListTripleInteractionTemplate does not work." << std::endl;
       return 0.0;
     }
     
+    template < typename _ThreeBodyPotential > inline real
+    VerletListTripleInteractionTemplate < _ThreeBodyPotential >::
+    computeEnergyCG(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyCG(int atomtype) in VerletListTripleInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
     template < typename _ThreeBodyPotential >
     inline void
     VerletListTripleInteractionTemplate < _ThreeBodyPotential >::

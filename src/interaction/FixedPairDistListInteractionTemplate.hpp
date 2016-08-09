@@ -85,6 +85,8 @@ namespace espressopp {
       virtual real computeEnergy();
       virtual real computeEnergyAA();
       virtual real computeEnergyCG();
+      virtual real computeEnergyAA(int atomtype);
+      virtual real computeEnergyCG(int atomtype);
       virtual void computeVirialX(std::vector<real> &p_xx_total, int bins); 
       virtual real computeVirial();
       virtual void computeVirialTensor(Tensor& w);
@@ -154,11 +156,25 @@ namespace espressopp {
     
     template < typename _Potential > inline real
     FixedPairDistListInteractionTemplate < _Potential >::
+    computeEnergyAA(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyAA(int atomtype) in FixedPairDistListInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
+    template < typename _Potential > inline real
+    FixedPairDistListInteractionTemplate < _Potential >::
     computeEnergyCG() {
       std::cout << "Warning! At the moment computeEnergyCG() in FixedPairDistListInteractionTemplate does not work." << std::endl;
       return 0.0;
     }
     
+    template < typename _Potential > inline real
+    FixedPairDistListInteractionTemplate < _Potential >::
+    computeEnergyCG(int atomtype) {
+      std::cout << "Warning! At the moment computeEnergyCG(int atomtype) in FixedPairDistListInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
     template < typename _Potential >
     inline void
     FixedPairDistListInteractionTemplate < _Potential >::

@@ -36,10 +36,19 @@ namespace espressopp {
     Interaction::registerPython() {
       using namespace espressopp::python;
 
+      real (Interaction::*pyComputeEnergyAAraw)() = &Interaction::computeEnergyAA;
+      real (Interaction::*pyComputeEnergyAAtype)(int) = &Interaction::computeEnergyAA;
+      real (Interaction::*pyComputeEnergyCGraw)() = &Interaction::computeEnergyCG;
+      real (Interaction::*pyComputeEnergyCGtype)(int) = &Interaction::computeEnergyCG;
+
       class_< Interaction, boost::noncopyable >("interaction_Interaction", no_init)
         .def("computeEnergy", &Interaction::computeEnergy)
-        .def("computeEnergyAA", &Interaction::computeEnergyAA)
-        .def("computeEnergyCG", &Interaction::computeEnergyCG)
+        //.def("computeEnergyAA", &Interaction::computeEnergyAA)
+        //.def("computeEnergyCG", &Interaction::computeEnergyCG)
+		.def("computeEnergyAA", pyComputeEnergyAAraw)
+		.def("computeEnergyAA", pyComputeEnergyAAtype)
+		.def("computeEnergyCG", pyComputeEnergyCGraw)
+		.def("computeEnergyCG", pyComputeEnergyCGtype)
         .def("computeVirial", &Interaction::computeVirial)
         .def("bondType", &Interaction::bondType)
       ;
