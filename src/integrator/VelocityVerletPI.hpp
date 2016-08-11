@@ -210,6 +210,8 @@ namespace espressopp {
         void transForces();
         void transPos1();
         void transPos2();
+        void transMom1();
+        void transMom2();
         
         real weight(real distanceSqr);
         real weightderivative(real distanceSqr);

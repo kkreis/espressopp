@@ -151,6 +151,7 @@ namespace espressopp {
   struct ParticleMomentum {
 
     Real3D v;
+    Real3D modemom;
     // force associated with first derivative of particle radius
     real vradius;
   private:
@@ -159,6 +160,8 @@ namespace espressopp {
     void serialize(Archive &ar, const unsigned int version) {
       for (int i = 0; i < 3; ++i)
         ar & v[i];
+      for (int i = 0; i < 3; ++i)
+        ar & modemom[i];
       ar & vradius;
     }
   };
@@ -201,6 +204,7 @@ namespace espressopp {
 
     void init() {
       m.v[0] = m.v[1] = m.v[2] = 0.0;
+      m.modemom[0] = m.modemom[1] = m.modemom[2] = 0.0;
       p.type         = 0;
       p.mass         = 1.0;
       p.q            = 0.0;
@@ -303,6 +307,11 @@ namespace espressopp {
     const Real3D& velocity() const { return m.v; }
     Real3D getV() const { return m.v; }
     void setV(const Real3D& velocity) { m.v = velocity; }
+
+    Real3D& modemom() { return m.modemom; }
+    const Real3D& modemom() const { return m.modemom; }
+    Real3D getModemom() const { return m.modemom; }
+    void setModemom(const Real3D& mm) { m.modemom = mm; }
 
     real& vradius() { return m.vradius; }
     const real& vradius() const { return m.vradius; }

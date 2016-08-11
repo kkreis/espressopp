@@ -104,6 +104,11 @@ class ParticleLocal(object):
     def modepos(self): return self.__getTmp().modepos
     @pos.setter
     def modepos(self, val): self.__getTmp().modepos = toReal3DFromVector(val)
+
+    @property
+    def modemom(self): return self.__getTmp().modemom
+    @pos.setter
+    def modemom(self, val): self.__getTmp().modemom = toReal3DFromVector(val)
     
     @property
     def type(self): return self.__getTmp().type

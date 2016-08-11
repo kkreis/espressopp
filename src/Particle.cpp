@@ -38,6 +38,7 @@ namespace espressopp {
       .add_property("fm", &Particle::getFm, &Particle::setFm)
       .add_property("v", &Particle::getV, &Particle::setV)
       .add_property("modepos", &Particle::getModepos, &Particle::setModepos)
+	  .add_property("modemom", &Particle::getModemom, &Particle::setModemom)
       .add_property("q", &Particle::getQ, &Particle::setQ)
       .add_property("radius", &Particle::getRadius, &Particle::setRadius)
       .add_property("fradius", &Particle::getFRadius, &Particle::setFRadius)

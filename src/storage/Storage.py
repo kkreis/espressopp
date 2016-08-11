@@ -152,6 +152,7 @@ class StorageLocal(object):
             index_pos         = -1
             index_modepos     = -1
             index_v           = -1
+            index_modemom     = -1
             index_f           = -1
             index_fm          = -1
             index_q           = -1
@@ -184,6 +185,7 @@ class StorageLocal(object):
                     elif val.lower() == "mass": index_mass = nindex
                     elif val.lower() == "varmass": index_varmass = nindex
                     elif val.lower() == "v": index_v = nindex
+                    elif val.lower() == "modemom": index_modemom = nindex
                     elif val.lower() == "f": index_f = nindex
                     elif val.lower() == "fm": index_fm = nindex
                     elif val.lower() == "q": index_q = nindex
@@ -246,6 +248,9 @@ class StorageLocal(object):
                     if index_modepos >= 0:
                         storedParticle.modepos = particle[index_modepos]
 
+                    if index_modemom >= 0:
+                        storedParticle.modemom = particle[index_modemom]
+
                     if index_f >= 0:
                         storedParticle.f = particle[index_f] 
 
@@ -304,6 +309,7 @@ class StorageLocal(object):
                   elif property.lower() == "mass" : particle.mass = value
                   elif property.lower() == "varmass" : particle.varmass = value
                   elif property.lower() == "v"    : particle.v    = value
+                  elif property.lower() == "modemom"  : particle.modemom = value
                   elif property.lower() == "f"    : particle.f    = value
                   elif property.lower() == "q"    : particle.q    = value
                   elif property.lower() == "radius" : particle.radius = value
