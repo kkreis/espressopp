@@ -108,7 +108,8 @@ namespace espressopp {
            init <shared_ptr<VerletListAdress>,
                  shared_ptr<FixedTupleListAdress>,
                  int,
-                 bool>()
+                 bool,
+				 bool>()
                 )
             .def("setPotentialQM", &VerletListPIadressTabulated::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressTabulated::setPotentialCL);
@@ -119,7 +120,8 @@ namespace espressopp {
            init <shared_ptr<VerletListAdress>,
                  shared_ptr<FixedTupleListAdress>,
                  int,
-                 bool>()
+                 bool,
+				 bool>()
                 )
             .def("setPotentialQM", &VerletListPIadressTabulatedLJ::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressTabulatedLJ::setPotentialCL);

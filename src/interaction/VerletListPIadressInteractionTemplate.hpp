@@ -50,8 +50,8 @@ namespace espressopp {
     
     public:
       VerletListPIadressInteractionTemplate
-      (shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, bool _speedup)
-                : verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter), speedup(_speedup) {
+      (shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, int _ntrotter, bool _speedup, bool _CLonCentroidInHY)
+                : verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter), speedup(_speedup), CLonCentroidInHY(_CLonCentroidInHY) {
 
           potentialArrayQM = esutil::Array2D<PotentialQM, esutil::enlarge>(0, 0, PotentialQM());
           potentialArrayCL = esutil::Array2D<PotentialCL, esutil::enlarge>(0, 0, PotentialCL());
@@ -86,6 +86,11 @@ namespace espressopp {
           ntrotter = _ntrotter;
       }
       
+      void
+      setCLonCentroidInHY(bool _CLonCentroidInHY) {
+    	  CLonCentroidInHY = _CLonCentroidInHY;
+      }
+
       void
       setSpeedup(bool _speedup) {
           speedup = _speedup;
@@ -151,6 +156,7 @@ namespace espressopp {
       real dex2; // dex^2
       int ntrotter; // Trotter number
       bool speedup; // Choose whether to approximate rings in Classical region by single particles
+      bool CLonCentroidInHY; // Choose whether to use centroids for CL interaction in HY region
       std::map<Particle*, real> energydiff;  // Energydifference V_AA - V_CG map for particles in hybrid region for drift term calculation in H-AdResS
       std::set<Particle*> adrZone;  // Virtual particles in AdResS zone (HY and AT region)
       std::set<Particle*> cgZone;
@@ -280,6 +286,29 @@ namespace espressopp {
          w2 = p2.lambda();        
          real w12 = (w1 + w2)/2.0;
 
+         std::cout << "CLonCentroidInHY: " << CLonCentroidInHY << "\n";
+
+         // Calculate forces in CL region
+         if ((CLonCentroidInHY == true) && (w12 != 1.0)) {
+             const PotentialCL &potentialCL = getPotentialCL(p1.type(), p2.type());
+             Real3D forcecl(0.0, 0.0, 0.0);
+             if(potentialCL._computeForce(forcecl, p1, p2)) {
+            	  forcecl *= (1.0 - w12);
+                  p1.force() += forcecl;
+                  p2.force() -= forcecl;
+             }
+
+             if (w12 != 0.0) {
+				real energyvpcl = potentialCL._computeEnergy(p1, p2);
+				if (w1 != 0.0) {   // if particle one is in hybrid region
+					energydiff[&p1] += ntrotter*energyvpcl;   // add CL energy for virtual particle 1
+				}
+				if (w2 != 0.0) {   // if particle two is in hybrid region
+					energydiff[&p2] += ntrotter*energyvpcl;   // add CL energy for virtual particle 2
+				}
+             }
+         }
+
          // Get the corresponding tuples
          FixedTupleListAdress::iterator it3;
          FixedTupleListAdress::iterator it4;
@@ -324,13 +353,15 @@ namespace espressopp {
                  
                      // REMOVE FOR IDEAL GAS
                      // Calculate CL forces
-                     const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
-                     Real3D forcecl(0.0, 0.0, 0.0);
-                     if(potentialCL._computeForce(forcecl, p3, p4)) {
-                         forcecl *= (1.0 - w12)/ntrotter;
-                         p3.force() += forcecl;
-                         p4.force() -= forcecl;  
-                     }
+                	 const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
+                	 if (CLonCentroidInHY == false){
+						 Real3D forcecl(0.0, 0.0, 0.0);
+						 if(potentialCL._computeForce(forcecl, p3, p4)) {
+							 forcecl *= (1.0 - w12)/ntrotter;
+							 p3.force() += forcecl;
+							 p4.force() -= forcecl;
+						 }
+                	 }
                      // REMOVE FOR IDEAL GAS
 
                      // Calculate QM forces
@@ -344,13 +375,15 @@ namespace espressopp {
                      
                      // Drift term WARNING - DOES NOT WORK CURRENTLY !!!
                      if (w12 != 0.0) {   //at least one particle in hybrid region => need to do the energy calculation
-                        real energyvpcl = potentialCL._computeEnergy(p3, p4);
-                        if (w1 != 0.0) {   // if particle one is in hybrid region
-                            energydiff[&p1] += energyvpcl;   // add CL energy for virtual particle 1
-                        }
-                        if (w2 != 0.0) {   // if particle two is in hybrid region
-                            energydiff[&p2] += energyvpcl;   // add CL energy for virtual particle 2
-                        }
+                    	if (CLonCentroidInHY == false){
+							real energyvpcl = potentialCL._computeEnergy(p3, p4);
+							if (w1 != 0.0) {   // if particle one is in hybrid region
+								energydiff[&p1] += energyvpcl;   // add CL energy for virtual particle 1
+							}
+							if (w2 != 0.0) {   // if particle two is in hybrid region
+								energydiff[&p2] += energyvpcl;   // add CL energy for virtual particle 2
+							}
+                    	}
                         
                         real energyvpqm = potentialQM._computeEnergy(p3, p4);
                         if (w1 != 0.0) {   // if particle one is in hybrid region
@@ -426,7 +459,7 @@ namespace espressopp {
               min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
               real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
               //mindriftforce *= weightderivative(min1sq);  // multiplication with derivative of the weighting function
-              mindriftforceX *= 0.5;
+              mindriftforceX *= 0.5* (1.0/ntrotter);
               mindriftforceX *= energydiff.find(&vp)->second;   // get the energy differences which were calculated previously and put in drift force
                       
               /*if (mindriftforce[0] < 0.0){
@@ -443,6 +476,31 @@ namespace espressopp {
               //Real3D driftforceadd(0.0,0.0,0.0);   
               vp.force() += driftforceadd;             // Goes in, if one wants to apply the "normal" drift force - also improve using [0] ...           // X SPLIT VS SPHERE CHANGE
               //std::cout << "Added Drift Force: " << driftforceadd << " for particle at pos(x).: " << vp.position()[0] << "\n";
+
+
+
+
+
+
+              // Get the corresponding tuples
+              /*FixedTupleListAdress::iterator it;
+              it = fixedtupleList->find(&vp);
+              if (it != fixedtupleList->end()) {
+            	  std::vector<Particle*> atList;
+            	  atList = it->second;
+            	  for (std::vector<Particle*>::iterator it2 = atList.begin();
+            	                                                       it2 != atList.end(); ++it2) {
+            		  Particle &at = **it2;
+            		  if(at.pib()==1){
+            			  at.forcem() += (1.0/(ntrotter * sqrt(ntrotter)))*driftforceadd;
+            			  break;
+            		  }
+            	  }
+              }*/
+
+
+
+
               
           }
           
@@ -546,6 +604,11 @@ namespace espressopp {
          real w1 = p1.lambda();
          real w2 = p2.lambda();
          real w12 = (w1 + w2)/2.0;
+
+         if ((CLonCentroidInHY == true) && (w12 != 1.0)) {
+    		 const PotentialCL &potentialCL = getPotentialCL(p1.type(), p2.type());
+         	 e += (1.0-w12)*potentialCL._computeEnergy(p1, p2);
+         }
           
          // Get the corresponding tuples
          FixedTupleListAdress::iterator it3;
@@ -591,8 +654,10 @@ namespace espressopp {
                  
                      // REMOVE FOR IDEAL GAS
                      // Calculate CL energy
-                     const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
-                     e += ((1.0-w12)/ntrotter)*potentialCL._computeEnergy(p3, p4);
+                	 if (CLonCentroidInHY == false){
+                		 const PotentialCL &potentialCL = getPotentialCL(p3.type(), p4.type());
+                     	 e += ((1.0-w12)/ntrotter)*potentialCL._computeEnergy(p3, p4);
+                	 }
                      // REMOVE FOR IDEAL GAS
                      
                      // Calculate QM energy

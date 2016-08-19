@@ -759,7 +759,7 @@ namespace espressopp {
 							}
                         }
                         else{
-                        	real modegamma = 2.0 * PILElambda * sqrt(omega2) * Eigenvalues.at(at.pib()-1);
+                        	real modegamma = 2.0 * PILElambda * sqrt(omega2) * sqrt(Eigenvalues.at(at.pib()-1));
                         	real prefac1_PILE = exp(-modegamma*dt);
                         	real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ));
 							if(constkinmass == false){

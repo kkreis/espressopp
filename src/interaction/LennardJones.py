@@ -129,9 +129,9 @@ class VerletListHadressLennardJones2Local(InteractionLocal, interaction_VerletLi
 
 class VerletListPIadressLennardJonesLocal(InteractionLocal, interaction_VerletListPIadressLennardJones):
     'The (local) Lennard Jones interaction using Verlet lists.'
-    def __init__(self, vl, fixedtupleList, ntrotter, speedup):
+    def __init__(self, vl, fixedtupleList, ntrotter, speedup, CLonCentroidInHY = False):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, interaction_VerletListPIadressLennardJones, vl, fixedtupleList, ntrotter, speedup)
+            cxxinit(self, interaction_VerletListPIadressLennardJones, vl, fixedtupleList, ntrotter, speedup, CLonCentroidInHY)
 
     def setPotentialQM(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():

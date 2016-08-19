@@ -58,6 +58,7 @@ from espressopp.analysis.RDFatomistic import *
 from espressopp.analysis.Energy import *
 from espressopp.analysis.Viscosity import *
 from espressopp.analysis.XDensity import *
+from espressopp.analysis.RadGyrXProfilePI import *
 from espressopp.analysis.XTemperature import *
 from espressopp.analysis.XPressure import *
 from espressopp.analysis.Test import *

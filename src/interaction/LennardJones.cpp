@@ -104,6 +104,7 @@ namespace espressopp {
                  init< shared_ptr<VerletListAdress>,
                         shared_ptr<FixedTupleListAdress>,
 						int,
+						bool,
 						bool>()
 						)
               .def("setPotentialQM", &VerletListPIadressLennardJones::setPotentialQM)

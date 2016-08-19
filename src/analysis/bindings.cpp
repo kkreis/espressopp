@@ -51,6 +51,7 @@
 #include "RDFatomistic.hpp"
 #include "Viscosity.hpp"
 #include "XDensity.hpp"
+#include "RadGyrXProfilePI.hpp"
 #include "XTemperature.hpp"
 #include "XPressure.hpp"
 #include "Test.hpp"
@@ -100,6 +101,7 @@ namespace espressopp {
       StaticStructF::registerPython();
       RDFatomistic::registerPython();
       XDensity::registerPython();
+      RadGyrXProfilePI::registerPython();
       XTemperature::registerPython();
       XPressure::registerPython();
       Test::registerPython();

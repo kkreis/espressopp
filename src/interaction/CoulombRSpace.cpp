@@ -59,7 +59,8 @@ namespace espressopp {
            init <shared_ptr<VerletListAdress>,
                  shared_ptr<FixedTupleListAdress>,
                  int,
-                 bool>()
+                 bool,
+				 bool>()
                 )
             .def("setPotentialQM", &VerletListPIadressCoulombRSpace::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressCoulombRSpace::setPotentialCL);
