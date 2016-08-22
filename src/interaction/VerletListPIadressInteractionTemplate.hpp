@@ -286,8 +286,6 @@ namespace espressopp {
          w2 = p2.lambda();        
          real w12 = (w1 + w2)/2.0;
 
-         std::cout << "CLonCentroidInHY: " << CLonCentroidInHY << "\n";
-
          // Calculate forces in CL region
          if ((CLonCentroidInHY == true) && (w12 != 1.0)) {
              const PotentialCL &potentialCL = getPotentialCL(p1.type(), p2.type());
