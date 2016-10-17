@@ -1,4 +1,4 @@
-#  Copyright (C) 2012,2013
+#  Copyright (C) 2012,2013,2014,2015,2016
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
@@ -151,6 +151,7 @@ from _espressopp import interaction_ReactionFieldGeneralized, \
                       interaction_VerletListAdressReactionFieldGeneralized, \
                       interaction_VerletListAdressATReactionFieldGeneralized, \
                       interaction_VerletListHadressReactionFieldGeneralized, \
+                      interaction_VerletListHadressATReactionFieldGeneralized, \
                       interaction_CellListReactionFieldGeneralized
                       #interaction_FixedPairListReactionFieldGeneralized
 
