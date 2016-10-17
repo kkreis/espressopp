@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -25,7 +25,11 @@
 #include "Tabulated.hpp"
 #include "VerletListInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
+#include "VerletListAdressATInteractionTemplate.hpp"
+#include "VerletListAdressCGInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
+#include "VerletListHadressATInteractionTemplate.hpp"
+#include "VerletListHadressCGInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
@@ -37,17 +41,25 @@ namespace espressopp {
         VerletListLennardJones;
     typedef class VerletListAdressInteractionTemplate <LennardJones, Tabulated>
         VerletListAdressLennardJones;
+    typedef class VerletListAdressATInteractionTemplate <LennardJones>
+        VerletListAdressATLennardJones;
+    typedef class VerletListAdressCGInteractionTemplate <LennardJones>
+        VerletListAdressCGLennardJones;
     typedef class VerletListAdressInteractionTemplate <LennardJones, LennardJones>
         VerletListAdressLennardJones2;
     typedef class VerletListHadressInteractionTemplate <LennardJones, Tabulated>
         VerletListHadressLennardJones;
+    typedef class VerletListHadressATInteractionTemplate <LennardJones>
+        VerletListHadressATLennardJones;
+    typedef class VerletListHadressCGInteractionTemplate <LennardJones>
+        VerletListHadressCGLennardJones;
     typedef class VerletListHadressInteractionTemplate <LennardJones, LennardJones>
         VerletListHadressLennardJones2;
-    typedef class CellListAllPairsInteractionTemplate <LennardJones> 
+    typedef class CellListAllPairsInteractionTemplate <LennardJones>
         CellListLennardJones;
-    typedef class FixedPairListInteractionTemplate <LennardJones> 
+    typedef class FixedPairListInteractionTemplate <LennardJones>
         FixedPairListLennardJones;
-    typedef class FixedPairListTypesInteractionTemplate <LennardJones> 
+    typedef class FixedPairListTypesInteractionTemplate <LennardJones>
         FixedPairListTypesLennardJones;
     LOG4ESPP_LOGGER(LennardJones::theLogger, "LennardJones");
     // LOG4ESPP_LOGGER(VerletListLennardJones::theLogger, "VerletListLennardJones");
@@ -55,7 +67,7 @@ namespace espressopp {
     //////////////////////////////////////////////////
     // REGISTRATION WITH PYTHON
     //////////////////////////////////////////////////
-    void 
+    void
     LennardJones::registerPython() {
       using namespace espressopp::python;
 
@@ -68,11 +80,29 @@ namespace espressopp {
 
       ;
 
-      class_< VerletListLennardJones, bases< Interaction > > 
+      class_< VerletListLennardJones, bases< Interaction > >
         ("interaction_VerletListLennardJones", init< shared_ptr<VerletList> >())
         .def("getVerletList", &VerletListLennardJones::getVerletList)
         .def("setPotential", &VerletListLennardJones::setPotential)
         .def("getPotential", &VerletListLennardJones::getPotentialPtr)
+      ;
+
+      class_< VerletListAdressATLennardJones, bases< Interaction > >
+        ("interaction_VerletListAdressATLennardJones",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("getVerletList", &VerletListAdressATLennardJones::getVerletList)
+        .def("setPotential", &VerletListAdressATLennardJones::setPotential)
+        .def("getPotential", &VerletListAdressATLennardJones::getPotentialPtr)
+      ;
+
+      class_< VerletListAdressCGLennardJones, bases< Interaction > >
+        ("interaction_VerletListAdressCGLennardJones",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("getVerletList", &VerletListAdressCGLennardJones::getVerletList)
+        .def("setPotential", &VerletListAdressCGLennardJones::setPotential)
+        .def("getPotential", &VerletListAdressCGLennardJones::getPotentialPtr)
       ;
 
       class_< VerletListAdressLennardJones, bases< Interaction > >
@@ -82,13 +112,31 @@ namespace espressopp {
         .def("setPotentialAT", &VerletListAdressLennardJones::setPotentialAT)
         .def("setPotentialCG", &VerletListAdressLennardJones::setPotentialCG);
       ;
-      
+
       class_< VerletListAdressLennardJones2, bases< Interaction > >
         ("interaction_VerletListAdressLennardJones2",
            init< shared_ptr<VerletListAdress>,
                   shared_ptr<FixedTupleListAdress> >())
         .def("setPotentialAT", &VerletListAdressLennardJones2::setPotentialAT)
         .def("setPotentialCG", &VerletListAdressLennardJones2::setPotentialCG);
+      ;
+
+      class_< VerletListHadressATLennardJones, bases< Interaction > >
+        ("interaction_VerletListHadressATLennardJones",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("getVerletList", &VerletListHadressATLennardJones::getVerletList)
+        .def("setPotential", &VerletListHadressATLennardJones::setPotential)
+        .def("getPotential", &VerletListHadressATLennardJones::getPotentialPtr)
+      ;
+
+      class_< VerletListHadressCGLennardJones, bases< Interaction > >
+        ("interaction_VerletListHadressCGLennardJones",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("getVerletList", &VerletListHadressCGLennardJones::getVerletList)
+        .def("setPotential", &VerletListHadressCGLennardJones::setPotential)
+        .def("getPotential", &VerletListHadressCGLennardJones::getPotentialPtr)
       ;
 
       class_< VerletListHadressLennardJones, bases< Interaction > >
@@ -98,7 +146,7 @@ namespace espressopp {
         .def("setPotentialAT", &VerletListHadressLennardJones::setPotentialAT)
         .def("setPotentialCG", &VerletListHadressLennardJones::setPotentialCG);
       ;
-      
+
       class_< VerletListHadressLennardJones2, bases< Interaction > >
         ("interaction_VerletListHadressLennardJones2",
            init< shared_ptr<VerletListAdress>,
@@ -106,8 +154,8 @@ namespace espressopp {
         .def("setPotentialAT", &VerletListHadressLennardJones2::setPotentialAT)
         .def("setPotentialCG", &VerletListHadressLennardJones2::setPotentialCG);
       ;
-      
-      class_< CellListLennardJones, bases< Interaction > > 
+
+      class_< CellListLennardJones, bases< Interaction > >
         ("interaction_CellListLennardJones", init< shared_ptr< storage::Storage > >())
         .def("setPotential", &CellListLennardJones::setPotential);
 	  ;
@@ -131,6 +179,6 @@ namespace espressopp {
          .def("getPotential", &FixedPairListTypesLennardJones::getPotentialPtr)
       ;
     }
-    
+
   }
 }
