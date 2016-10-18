@@ -56,6 +56,7 @@
 #include "CapForce.hpp"
 #include "ExtAnalyze.hpp"
 #include "Settle.hpp"
+#include "Rattle.hpp"
 #include "VelocityVerletOnRadius.hpp"
 #include "AssociationReaction.hpp"
 #include "MinimizeEnergy.hpp"
@@ -97,6 +98,7 @@ namespace espressopp {
       CapForce::registerPython();
       ExtAnalyze::registerPython();
       Settle::registerPython();
+      Rattle::registerPython();
       VelocityVerletOnRadius::registerPython();
       AssociationReaction::registerPython();
       MinimizeEnergy::registerPython();
