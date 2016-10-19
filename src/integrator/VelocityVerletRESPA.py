@@ -42,11 +42,20 @@ class VelocityVerletRESPALocal(MDIntegratorLocal, integrator_VelocityVerletRESPA
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             cxxinit(self, integrator_VelocityVerletRESPA, system)
 
+    def setmultistep(self, int):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setmultistep(self, int)
+
+    def getmultistep(self):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getmultistep(self)
+
 if pmi.isController :
     class VelocityVerletRESPA(MDIntegrator):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
           cls =  'espressopp.integrator.VelocityVerletRESPALocal',
-          pmicall = ['resetTimers'],
-          pmiinvoke = ['getTimers']
+          pmiproperty = ['multistep'],
+          pmicall = ['resetTimers', 'setmultistep'],
+          pmiinvoke = ['getTimers', 'getmultistep']
         )

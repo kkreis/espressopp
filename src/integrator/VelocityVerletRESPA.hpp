@@ -70,6 +70,14 @@ namespace espressopp {
 
         void run(int nsteps);
 
+        /** Setter routine for multistep. */
+        void setmultistep(int _multistep);
+        /** Getter routine for multistep. */
+        int getmultistep() { return multistep; }
+
+        /** Setter routine for timestep. */
+        void setTimeStep(real _dt);
+
         /** Load timings in array to export to Python as a tuple. */
         void loadTimers(real t[10]);
 
@@ -110,6 +118,8 @@ namespace espressopp {
 
         real maxCut;
 
+        int multistep;
+        real dtlong;
 
         /* TODO should be removed after signals will be tested
         shared_ptr< class Langevin > langevin;  //!< Langevin thermostat if available
@@ -132,11 +142,13 @@ namespace espressopp {
 
         void integrate2();
 
+        void integrateSlow();
+
         void initForces();
 
-        void updateForces();
+        void updateForces(bool slow);
 
-        void calcForces();
+        void calcForces(bool slow);
 
         void printPositions(bool withGhost);
 

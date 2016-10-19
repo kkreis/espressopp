@@ -51,6 +51,8 @@ namespace espressopp {
       LOG4ESPP_INFO(theLogger, "construct VelocityVerletRESPA");
       resortFlag = true;
       maxDist    = 0.0;
+      multistep = 1;
+      dtlong = dt*multistep;
     }
 
     VelocityVerletRESPA::~VelocityVerletRESPA()
@@ -68,6 +70,7 @@ namespace espressopp {
       System& system = getSystemRef();
       storage::Storage& storage = *system.storage;
       real skinHalf = 0.5 * system.getSkin();
+      dtlong = dt*multistep;
 
       // signal
       runInit();
@@ -83,75 +86,79 @@ namespace espressopp {
         // timeResort += timeIntegrate.getElapsedTime();
       }
 
-      bool recalcForces = true;  // TODO: more intelligent
-
-      if (recalcForces) {
-        LOG4ESPP_INFO(theLogger, "recalc forces before starting main integration loop");
-
-        // signal
-        recalc1();
-
-        updateForces();
-        if (LOG4ESPP_DEBUG_ON(theLogger)) {
-            // printForces(false);   // forces are reduced to real particles
-        }
-
-        // signal
-        recalc2();
-      }
-
-      LOG4ESPP_INFO(theLogger, "starting main integration loop (nsteps=" << nsteps << ")");
-
       for (int i = 0; i < nsteps; i++) {
-        LOG4ESPP_INFO(theLogger, "Next step " << i << " of " << nsteps << " starts");
-
-        //saveOldPos(); // save particle positions needed for constraints
-
-        // signal
-        befIntP();
-
-        time = timeIntegrate.getElapsedTime();
-        LOG4ESPP_INFO(theLogger, "updating positions and velocities")
-        maxDist += integrate1();
-        timeInt1 += timeIntegrate.getElapsedTime() - time;
-
+        if(i == 0) { updateForces(true); }
+        // DISTRIBUTE CG FORCES ON ATOMS IN THE IF (ADRESS EXTENSION) !!! IMPLEMENT !!!
         /*
-        real cellsize = 1.4411685442;
-        if (maxDist > 1.4411685442){
-          cout<<"WARNING!!!!!! huge jump: "<<maxDist<<endl;
-          exit(1);
-        }*/
+        NOTE: IMPLEMENT BY PUTTING THE ADRESS EXTENSION ON AFTCALCF SIGNAL AND THE THERMOSTAT ON WHERE ADRESS IS NOW
+        */
 
-        // signal
-        aftIntP();
+        integrateSlow();
+        // INTEGRATE ATOMISTIC PARTICLES (ADRESS EXTENSION) !!! IMPLEMENT !!!
+        /*
+        NOTE: IMPLEMENT BY ADDING NEW SIGNALS
+        */
 
-        LOG4ESPP_INFO(theLogger, "maxDist = " << maxDist << ", skin/2 = " << skinHalf);
+        for (int j = 0; j < multistep; j++) {
+          if(i == 0) {
+            // signal
+            recalc1();
+            updateForces(false);
+            // signal
+            recalc2();
+          }
 
-        if (maxDist > skinHalf) resortFlag = true;
+          // signal
+          befIntP();
 
-        if (resortFlag) {
-            VT_TRACER("resort1");
-            time = timeIntegrate.getElapsedTime();
-            LOG4ESPP_INFO(theLogger, "step " << i << ": resort particles");
-            storage.decompose();
-            maxDist  = 0.0;
-            resortFlag = false;
-            nResorts ++;
-            timeResort += timeIntegrate.getElapsedTime() - time;
+          time = timeIntegrate.getElapsedTime();
+          LOG4ESPP_INFO(theLogger, "updating positions and velocities")
+          maxDist += integrate1();
+          timeInt1 += timeIntegrate.getElapsedTime() - time;
+
+          /*
+          real cellsize = 1.4411685442;
+          if (maxDist > 1.4411685442){
+            cout<<"WARNING!!!!!! huge jump: "<<maxDist<<endl;
+            exit(1);
+          }*/
+
+          // signal
+          aftIntP();
+
+          LOG4ESPP_INFO(theLogger, "maxDist = " << maxDist << ", skin/2 = " << skinHalf);
+
+          if (maxDist > skinHalf) resortFlag = true;
+
+          if (resortFlag) {
+              VT_TRACER("resort1");
+              time = timeIntegrate.getElapsedTime();
+              LOG4ESPP_INFO(theLogger, "step " << i << ": resort particles");
+              storage.decompose();
+              maxDist  = 0.0;
+              resortFlag = false;
+              nResorts ++;
+              timeResort += timeIntegrate.getElapsedTime() - time;
+          }
+
+          LOG4ESPP_INFO(theLogger, "updating forces")
+          updateForces(false);
+
+          // signal
+          befIntV();
+
+          time = timeIntegrate.getElapsedTime();
+          integrate2();
+          timeInt2 += timeIntegrate.getElapsedTime() - time;
+
+          // signal
+          aftIntV();
+
         }
-
-        LOG4ESPP_INFO(theLogger, "updating forces")
-        updateForces();
-
-        // signal
-        befIntV();
-
-        time = timeIntegrate.getElapsedTime();
-        integrate2();
-        timeInt2 += timeIntegrate.getElapsedTime() - time;
-
-        // signal
-        aftIntV();
+        updateForces(true);
+        // DISTRIBUTE CG FORCES ON ATOMS (ADRESS EXTENSION) !!! IMPLEMENT !!!
+        integrateSlow();
+        // INTEGRATE ATOMISTIC PARTICLES (ADRESS EXTENSION) !!! IMPLEMENT !!!
       }
 
       timeRun = timeIntegrate.getElapsedTime();
@@ -300,7 +307,24 @@ namespace espressopp {
       step++;
     }
 
-    void VelocityVerletRESPA::calcForces()
+    void VelocityVerletRESPA::integrateSlow()
+    {
+      LOG4ESPP_INFO(theLogger, "updating second half step of velocities")
+      System& system = getSystemRef();
+      CellList realCells = system.storage->getRealCells();
+
+      // loop over all particles of the local cells
+      real half_dt = 0.5 * dtlong;
+      for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
+        real dtfm = half_dt / cit->mass();
+        /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t) */
+        cit->velocity() += dtfm * cit->force();
+      }
+
+      step++;
+    }
+
+    void VelocityVerletRESPA::calcForces(bool slow)
     {
       VT_TRACER("forces");
 
@@ -318,12 +342,21 @@ namespace espressopp {
 	    LOG4ESPP_INFO(theLogger, "compute forces for srIL " << i << " of " << srIL.size());
         real time;
         time = timeIntegrate.getElapsedTime();
-        srIL[i]->addForces();
+        if(slow == true){
+          if(srIL[i]->bondType() == NonbondedSlow){
+            srIL[i]->addForces();
+          }
+        }
+        else{
+          if(srIL[i]->bondType() != NonbondedSlow){
+            srIL[i]->addForces();
+          }
+        }
         timeForceComp[i] += timeIntegrate.getElapsedTime() - time;
       }
     }
 
-    void VelocityVerletRESPA::updateForces()
+    void VelocityVerletRESPA::updateForces(bool slow)
     {
       LOG4ESPP_INFO(theLogger, "update ghosts, calculate forces and collect ghost forces")
       real time;
@@ -335,7 +368,7 @@ namespace espressopp {
       }
       timeComm1 += timeIntegrate.getElapsedTime() - time;
       time = timeIntegrate.getElapsedTime();
-      calcForces();
+      calcForces(slow);
       timeForce += timeIntegrate.getElapsedTime() - time;
       time = timeIntegrate.getElapsedTime();
       {
@@ -345,7 +378,9 @@ namespace espressopp {
       timeComm2 += timeIntegrate.getElapsedTime() - time;
 
       // signal
-      aftCalcF();
+      if (slow == false){
+        aftCalcF();
+      }
     }
 
     void VelocityVerletRESPA::initForces()
@@ -403,6 +438,32 @@ namespace espressopp {
       }
     }
 
+    void VelocityVerletRESPA::setmultistep(int _multistep)
+    {
+      if (_multistep == 0) {
+        System& system = getSystemRef();
+        esutil::Error err(system.comm);
+        std::stringstream msg;
+        msg << "multistep must be larger than zero!";
+        err.setException(msg.str());
+      }
+      multistep = _multistep;
+      dtlong = dt*multistep;
+    }
+
+    void VelocityVerletRESPA::setTimeStep(real _dt)
+    {
+      if (_dt == 0.0) {
+        System& system = getSystemRef();
+        esutil::Error err(system.comm);
+        std::stringstream msg;
+        msg << "Timestep 'dt' must be non-zero!";
+        err.setException(msg.str());
+      }
+      dt = _dt;
+      dtlong = dt*multistep;
+    }
+
     /****************************************************
     ** REGISTRATION WITH PYTHON
     ****************************************************/
@@ -416,6 +477,9 @@ namespace espressopp {
         ("integrator_VelocityVerletRESPA", init< shared_ptr<System> >())
         .def("getTimers", &wrapGetTimers)
         .def("resetTimers", &VelocityVerletRESPA::resetTimers)
+        .def("setmultistep", &VelocityVerletRESPA::setmultistep)
+        .def("getmultistep", &VelocityVerletRESPA::getmultistep)
+        .add_property("multistep", &VelocityVerletRESPA::getmultistep, &VelocityVerletRESPA::setmultistep)
         ;
     }
   }
