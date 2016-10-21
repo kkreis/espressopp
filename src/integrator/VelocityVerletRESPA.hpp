@@ -140,9 +140,7 @@ namespace espressopp {
 
         real integrate1();
 
-        void integrate2();
-
-        void integrateSlow();
+        void integrate2(bool slow);
 
         void initForces();
 

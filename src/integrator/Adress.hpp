@@ -48,6 +48,7 @@ namespace espressopp {
         shared_ptr<FixedTupleListAdress> fixedtupleList;
         bool KTI;
         int regionupdates;
+        int multistep;
 
         real dhy;
         real pidhy2;
@@ -56,7 +57,7 @@ namespace espressopp {
         real dexdhy;
         real dexdhy2;
 
-        Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI = false, int _regionupdates = 1);
+        Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI = false, int _regionupdates = 1, int _multistep = 1);
 
         ~Adress();
 
@@ -65,12 +66,12 @@ namespace espressopp {
 
       private:
 
-        boost::signals2::connection _SetPosVel, _initForces, _integrate1, _inIntP, _integrate2, _recalc2, _befIntV;  //_aftCalcF;
+        boost::signals2::connection _SetPosVel, _initForces, _integrate1, _integrate2, _integrateSlow, _aftCalcSlow, _recalc2, _befIntV;  //_aftCalcF;
 
         void integrate1(real&);
         void initForces();
         void SetPosVel();
-        void integrate2();
+        void integrate2(bool afterSlowForces);
         void aftCalcF();
         void communicateAdrPositions();
 

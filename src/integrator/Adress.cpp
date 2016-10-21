@@ -40,8 +40,8 @@ namespace espressopp {
 
     using namespace espressopp::iterator;
 
-    Adress::Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI, int _regionupdates)
-        : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), KTI(_KTI), regionupdates(_regionupdates){
+    Adress::Adress(shared_ptr<System> _system, shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList, bool _KTI, int _regionupdates, int _multistep)
+        : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), KTI(_KTI), regionupdates(_regionupdates), multistep(_multistep){
         LOG4ESPP_INFO(theLogger, "construct Adress");
         type = Extension::Adress;
 
@@ -68,8 +68,10 @@ namespace espressopp {
         _initForces.disconnect();
         _integrate1.disconnect();
         _integrate2.disconnect();
-        _inIntP.disconnect();
+        _integrateSlow.disconnect();
+        // _inIntP.disconnect();
         //_aftCalcF.disconnect();
+        _aftCalcSlow.disconnect();
         _recalc2.disconnect();
         _befIntV.disconnect();
     }
@@ -94,7 +96,11 @@ namespace espressopp {
 
         // connection to after integrate2()
         _integrate2 = integrator->aftIntV.connect(
-                boost::bind(&Adress::integrate2, this), boost::signals2::at_front);
+                boost::bind(&Adress::integrate2, this, false), boost::signals2::at_front);
+
+        // connection to after integrate2()
+        _integrateSlow = integrator->aftIntSlow.connect(
+                boost::bind(&Adress::integrate2, this, true), boost::signals2::at_front);
 
         // Note: Both this extension as well as Langevin Thermostat access singal aftCalcF. This might lead to undefined behavior.
         // Therefore, we use other signals here, to make sure the Thermostat would be always called first, before force distributions take place.
@@ -102,11 +108,15 @@ namespace espressopp {
         //_aftCalcF = integrator->aftCalcF.connect(
         //        boost::bind(&Adress::aftCalcF, this));
 
-        // connection to after _recalc2()
+        // connection to after aftCalcSlow
+        _aftCalcSlow = integrator->aftCalcSlow.connect(
+                boost::bind(&Adress::aftCalcF, this), boost::signals2::at_front);
+
+        // connection to after recalc2()
         _recalc2 = integrator->recalc2.connect(
                 boost::bind(&Adress::aftCalcF, this), boost::signals2::at_front);
 
-        // connection to after _befIntV()
+        // connection to after befIntV()
         _befIntV = integrator->befIntV.connect(
                 boost::bind(&Adress::aftCalcF, this), boost::signals2::at_front);
     }
@@ -361,7 +371,7 @@ namespace espressopp {
     }
 
 
-    void Adress::integrate2() {
+    void Adress::integrate2(bool afterSlowForces) {
 
         System& system = getSystemRef();
         real dt = integrator->getTimeStep();
@@ -371,7 +381,10 @@ namespace espressopp {
         for (std::vector<Particle>::iterator it = adrATparticles.begin();
                 it != adrATparticles.end(); ++it) {
 
-            real dtfm = 0.5 * dt / it->mass();
+            real dtfm = 0.0;
+            if (afterSlowForces) { dtfm = 0.5 * multistep * dt / it->mass(); }
+            else { dtfm = 0.5 * dt / it->mass(); }
+            // real dtfm = 0.5 * dt / it->mass();
 
             // Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t)
             it->velocity() += dtfm * it->force();
@@ -573,7 +586,7 @@ namespace espressopp {
       using namespace espressopp::python;
 
       class_<Adress, shared_ptr<Adress>, bases<Extension> >
-        ("integrator_Adress", init<shared_ptr<System>, shared_ptr<VerletListAdress>, shared_ptr<FixedTupleListAdress>, bool, int >())
+        ("integrator_Adress", init<shared_ptr<System>, shared_ptr<VerletListAdress>, shared_ptr<FixedTupleListAdress>, bool, int, int >())
         .def("connect", &Adress::connect)
         .def("disconnect", &Adress::disconnect)
         ;

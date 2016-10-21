@@ -51,11 +51,13 @@ Furthermore, when having moving AdResS regions based on particles, regionupdates
                 :param _fixedtuplelist: fixedtuplelist object
                 :param KTI: (default: False) update resolution parameter? (Yes: set False, No: set True)
                 :param regionupdates: (default: 1) after how many steps does the AdResS region needs to be updated?
+                :param multistep: (default: 1) when used with VelocityVerletRESPA, after how many steps of the inner integration loop do we update the slow forces?
                 :type _system: shared_ptr<System>
                 :type _verletlist: shared_ptr<VerletListAdress>
                 :type _fixedtuplelist: shared_ptr<FixedTupleListAdress>
                 :type KTI: bool
                 :type regionupdates: int
+                :type multistep: int
 """
 
 from espressopp.esutil import cxxinit
@@ -67,10 +69,10 @@ from _espressopp import integrator_Adress
 class AdressLocal(ExtensionLocal, integrator_Adress):
 
 
-    def __init__(self, _system, _verletlist, _fixedtuplelist, KTI = False, regionupdates = 1):
+    def __init__(self, _system, _verletlist, _fixedtuplelist, KTI = False, regionupdates = 1, multistep = 1):
 	if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
         	if pmi.workerIsActive():
-            		cxxinit(self, integrator_Adress, _system, _verletlist, _fixedtuplelist, KTI, regionupdates)
+            		cxxinit(self, integrator_Adress, _system, _verletlist, _fixedtuplelist, KTI, regionupdates, multistep)
 
 if pmi.isController:
     class Adress(Extension):

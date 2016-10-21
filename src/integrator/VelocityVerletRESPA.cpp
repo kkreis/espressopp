@@ -87,20 +87,26 @@ namespace espressopp {
       }
 
       for (int i = 0; i < nsteps; i++) {
-        if(i == 0) { updateForces(true); }
+        if(i == 0) {
+          updateForces(true);
+          // signal
+          aftCalcSlow();
+        }
         // DISTRIBUTE CG FORCES ON ATOMS IN THE IF (ADRESS EXTENSION) !!! IMPLEMENT !!!
         /*
         NOTE: IMPLEMENT BY PUTTING THE ADRESS EXTENSION ON AFTCALCF SIGNAL AND THE THERMOSTAT ON WHERE ADRESS IS NOW
         */
 
-        integrateSlow();
+        integrate2(true);
+        // signal
+        aftIntSlow();
         // INTEGRATE ATOMISTIC PARTICLES (ADRESS EXTENSION) !!! IMPLEMENT !!!
         /*
         NOTE: IMPLEMENT BY ADDING NEW SIGNALS
         */
 
         for (int j = 0; j < multistep; j++) {
-          if(i == 0) {
+          if(j == 0) {
             // signal
             recalc1();
             updateForces(false);
@@ -148,7 +154,7 @@ namespace espressopp {
           befIntV();
 
           time = timeIntegrate.getElapsedTime();
-          integrate2();
+          integrate2(false);
           timeInt2 += timeIntegrate.getElapsedTime() - time;
 
           // signal
@@ -156,8 +162,11 @@ namespace espressopp {
 
         }
         updateForces(true);
-        // DISTRIBUTE CG FORCES ON ATOMS (ADRESS EXTENSION) !!! IMPLEMENT !!!
-        integrateSlow();
+        // signal
+        aftCalcSlow();
+        integrate2(true);
+        // signal
+        aftIntSlow();
         // INTEGRATE ATOMISTIC PARTICLES (ADRESS EXTENSION) !!! IMPLEMENT !!!
       }
 
@@ -290,31 +299,17 @@ namespace espressopp {
       return sqrt(maxAllSqDist);
     }
 
-    void VelocityVerletRESPA::integrate2()
+    void VelocityVerletRESPA::integrate2(bool slow)
     {
       LOG4ESPP_INFO(theLogger, "updating second half step of velocities")
       System& system = getSystemRef();
       CellList realCells = system.storage->getRealCells();
 
       // loop over all particles of the local cells
-      real half_dt = 0.5 * dt;
-      for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-        real dtfm = half_dt / cit->mass();
-        /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t) */
-        cit->velocity() += dtfm * cit->force();
-      }
-
-      step++;
-    }
-
-    void VelocityVerletRESPA::integrateSlow()
-    {
-      LOG4ESPP_INFO(theLogger, "updating second half step of velocities")
-      System& system = getSystemRef();
-      CellList realCells = system.storage->getRealCells();
-
-      // loop over all particles of the local cells
-      real half_dt = 0.5 * dtlong;
+      real half_dt = 0.0;
+      if(slow) { half_dt = 0.5 * dtlong; }
+      else { half_dt = 0.5 * dt; }
+      // std::cout << "half_dt: " << half_dt << "\n";
       for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
         real dtfm = half_dt / cit->mass();
         /* Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t) */
