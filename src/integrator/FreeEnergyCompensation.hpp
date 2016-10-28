@@ -45,7 +45,8 @@ namespace espressopp {
 
       public:
         bool sphereAdr;
-        FreeEnergyCompensation(shared_ptr<System> system, bool _sphereAdr = false);
+        bool slow;
+        FreeEnergyCompensation(shared_ptr<System> system, bool _sphereAdr = false, bool _slow = false);
         virtual ~FreeEnergyCompensation();
 
         /** Setter for the filename, will read in the table. */

@@ -92,18 +92,10 @@ namespace espressopp {
           // signal
           aftCalcSlow();
         }
-        // DISTRIBUTE CG FORCES ON ATOMS IN THE IF (ADRESS EXTENSION) !!! IMPLEMENT !!!
-        /*
-        NOTE: IMPLEMENT BY PUTTING THE ADRESS EXTENSION ON AFTCALCF SIGNAL AND THE THERMOSTAT ON WHERE ADRESS IS NOW
-        */
 
         integrate2(true);
         // signal
         aftIntSlow();
-        // INTEGRATE ATOMISTIC PARTICLES (ADRESS EXTENSION) !!! IMPLEMENT !!!
-        /*
-        NOTE: IMPLEMENT BY ADDING NEW SIGNALS
-        */
 
         for (int j = 0; j < multistep; j++) {
           if(j == 0) {
@@ -167,7 +159,6 @@ namespace espressopp {
         integrate2(true);
         // signal
         aftIntSlow();
-        // INTEGRATE ATOMISTIC PARTICLES (ADRESS EXTENSION) !!! IMPLEMENT !!!
       }
 
       timeRun = timeIntegrate.getElapsedTime();

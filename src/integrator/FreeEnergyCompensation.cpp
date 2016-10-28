@@ -38,8 +38,8 @@ namespace espressopp {
 
     LOG4ESPP_LOGGER(FreeEnergyCompensation::theLogger, "FreeEnergyCompensation");
 
-    FreeEnergyCompensation::FreeEnergyCompensation(shared_ptr<System> system, bool _sphereAdr)
-    :Extension(system), sphereAdr(_sphereAdr) {
+    FreeEnergyCompensation::FreeEnergyCompensation(shared_ptr<System> system, bool _sphereAdr, bool _slow)
+    :Extension(system), sphereAdr(_sphereAdr), slow(_slow) {
 
         type = Extension::FreeEnergyCompensation;
 
@@ -53,8 +53,14 @@ namespace espressopp {
 
 
     void FreeEnergyCompensation::connect(){
+      if(slow){
+        _applyForce = integrator->aftCalcSlow.connect(
+            boost::bind(&FreeEnergyCompensation::applyForce, this));
+      }
+      else{
         _applyForce = integrator->aftCalcF.connect(
             boost::bind(&FreeEnergyCompensation::applyForce, this));
+      }
     }
 
     void FreeEnergyCompensation::disconnect(){
@@ -194,7 +200,7 @@ namespace espressopp {
       using namespace espressopp::python;
 
       class_<FreeEnergyCompensation, shared_ptr<FreeEnergyCompensation>, bases<Extension> >
-        ("integrator_FreeEnergyCompensation", init< shared_ptr<System>, bool >())
+        ("integrator_FreeEnergyCompensation", init< shared_ptr<System>, bool, bool >())
         .add_property("filename", &FreeEnergyCompensation::getFilename)
         .def("connect", &FreeEnergyCompensation::connect)
         .def("disconnect", &FreeEnergyCompensation::disconnect)

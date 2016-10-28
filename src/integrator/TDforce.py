@@ -69,9 +69,9 @@ from _espressopp import integrator_TDforce
 
 class TDforceLocal(integrator_TDforce):
 
-    def __init__(self, system, verletlist, startdist = 0.0, enddist = 0.0, edgeweightmultiplier = 20):
+    def __init__(self, system, verletlist, startdist = 0.0, enddist = 0.0, edgeweightmultiplier = 20, slow = False):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, integrator_TDforce, system, verletlist, startdist, enddist, edgeweightmultiplier)
+            cxxinit(self, integrator_TDforce, system, verletlist, startdist, enddist, edgeweightmultiplier, slow)
 
     def addForce(self, itype, filename, type):
             """

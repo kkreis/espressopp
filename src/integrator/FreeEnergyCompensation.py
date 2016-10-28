@@ -65,9 +65,9 @@ from _espressopp import integrator_FreeEnergyCompensation
 
 class FreeEnergyCompensationLocal(ExtensionLocal, integrator_FreeEnergyCompensation):
 
-    def __init__(self, system, center=[], sphereAdr = False):
+    def __init__(self, system, center=[], sphereAdr = False, slow = False):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
-            cxxinit(self, integrator_FreeEnergyCompensation, system, sphereAdr)
+            cxxinit(self, integrator_FreeEnergyCompensation, system, sphereAdr, slow)
 
             # set center of FreeEnergyCompensation force
             if (center != []):
