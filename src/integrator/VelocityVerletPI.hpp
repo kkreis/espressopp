@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 // ESPP_CLASS
@@ -38,30 +38,30 @@ namespace espressopp {
 
       public:
         //shared_ptr<VerletListAdress> verletList;
-        
+
         VelocityVerletPI(shared_ptr<class espressopp::System> system, shared_ptr<VerletListAdress> _verletList);
 
         virtual ~VelocityVerletPI();
 
-        shared_ptr<VerletListAdress> verletList;        
-       
+        shared_ptr<VerletListAdress> verletList;
+
         void run(int nsteps);
 
         /** Setter routine for the fast TimeStep. */
         void setTimeStep(real _dt);
         /** Getter routine for the fast TimeStep. */
         real getTimeStep() { return dt; }
-        
+
         /** Setter routine for the mStep. */
         void setmStep(int _mStep);
         /** Getter routine for the mStep. */
         real getmStep() { return mStep; }
-        
+
         /** Setter routine for the sStep. */
         void setsStep(int _sStep);
         /** Getter routine for the sStep. */
         real getsStep() { return sStep; }
-        
+
         /** Setter routine for ntrotter. */
         void setNtrotter(int _ntrotter);
         /** Getter routine for ntrotter. */
@@ -70,16 +70,16 @@ namespace espressopp {
         void add(real val) { tmpvals.push_back(val); } // add particle id (called from python)
 
         void addEV() { Tvectors.push_back(tmpvals); tmpvals.clear();}
-        
+
         void addValues(real val) { Eigenvalues.push_back(val); } // add particle id (called from python)
-        
+
         void transp();
-        
+
         /** Setter routine for temperature. */
         void setTemperature(real _temperature);
         /** Getter routine for temperature. */
         real getTemperature() { return temperature; }
-        
+
         /** Setter routine for gamma. */
         void setGamma(real _gamma);
         /** Getter routine for gamma. */
@@ -94,7 +94,7 @@ namespace espressopp {
         void setPILElambda(real _PILElambda);
         /** Getter routine for CMDparameter. */
         real getPILElambda() { return PILElambda; }
-        
+
         /** Setter routine for clmassmultiplier. */
         void setClmassmultiplier(real _clmassmultiplier);
         /** Getter routine for clmassmultiplier. */
@@ -129,22 +129,25 @@ namespace espressopp {
         void setConstKinMass(bool _constkinmass);
         /** Getter routine for speedup. */
         bool getConstKinMass() { return constkinmass; }
-        
+
         /** Setter routine for verletList. */
         void setVerletList(shared_ptr<VerletListAdress> _verletList);
-        /** Getter routine for verletList. */ 
+        /** Getter routine for verletList. */
         shared_ptr<VerletListAdress> getVerletList() { return verletList; }
-        
+
+        /** Getter routine for verletlistBuilds. */
+        int getVerletlistBuilds() { return verletlistBuilds; }
+
         // Compute internal ring energies
         real computeRingEnergy();
         real computeRingEnergyRaw();
-        
+
         // Compute special kinetic energy
         real computeKineticEnergy();
 
         // Compute internal ring energies
         real computePositionDrift(int parttype);
-        
+
         // Compute special kinetic energy
         real computeMomentumDrift(int parttype);
 
@@ -156,6 +159,7 @@ namespace espressopp {
         int sStep; // medium time step = sStep * dt
         int mStep; // large time step = mStep * sStep * dt
         int ntrotter; // number of Trotter beads
+        int verletlistBuilds; // number of Verlet list builds from beginning
         bool resortFlag;  // true implies need for resort of particles
         bool speedup; // freeze rings in classical region?
         bool KTI; // KTI-like simulation with constant and uniform resolution?
@@ -174,26 +178,24 @@ namespace espressopp {
         real dex2;
         real dexdhy;
         real dexdhy2;
-        
-        int UpdateCounter; // JUST FOR CHECKING AND DEBUGGING
-                
+
         real omega2;
         real clmassmultiplier;
-        
+
         real CMDparameter;
         real PILElambda;
 
         real gamma;
         real temperature;
-        
+
         std::vector< std::vector<real> > Eigenvectors;
         std::vector< std::vector<real> > Tvectors;
         std::vector< real > Eigenvalues;
-        
+
         std::vector<real> tmpvals;
-        
+
         shared_ptr< esutil::RNG > rng;
-        
+
         void integrateV1(int t);
         void integrateV2();
         void integrateModePos();
@@ -212,7 +214,7 @@ namespace espressopp {
         void transPos2();
         void transMom1();
         void transMom2();
-        
+
         real weight(real distanceSqr);
         real weightderivative(real distanceSqr);
 

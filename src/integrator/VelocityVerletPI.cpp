@@ -74,8 +74,7 @@ namespace espressopp {
       mStep = 0;
       omega2 = 0.0;
       clmassmultiplier = 100.0;
-
-      UpdateCounter = 0;
+      verletlistBuilds = 0;
 
       // AdResS PI stuff
       dhy = verletList->getHy();
@@ -127,6 +126,7 @@ namespace espressopp {
       // Before start make sure that particles are on the right processor
       if (resortFlag) {
         storage.decompose();
+        verletlistBuilds += 1;
         maxDist = 0.0;
         resortFlag = false;
       }
@@ -218,6 +218,7 @@ namespace espressopp {
                 if (maxDist > skinHalf) resortFlag = true;
                 if (resortFlag) {
                     storage.decompose();
+                    verletlistBuilds += 1;
                     transPos2();
                     maxDist  = 0.0;
                     resortFlag = false;
@@ -1902,6 +1903,7 @@ namespace espressopp {
 		.def("computeRingEnergyRaw", &VelocityVerletPI::computeRingEnergyRaw)
         .def("computeMomentumDrift", &VelocityVerletPI::computeMomentumDrift)
         .def("computePositionDrift", &VelocityVerletPI::computePositionDrift)
+        .def("getVerletlistBuilds", &VelocityVerletPI::getVerletlistBuilds)
         .add_property("mStep", &VelocityVerletPI::getmStep, &VelocityVerletPI::setmStep)
         .add_property("sStep", &VelocityVerletPI::getsStep, &VelocityVerletPI::setsStep)
         .add_property("ntrotter", &VelocityVerletPI::getNtrotter, &VelocityVerletPI::setNtrotter)
@@ -1916,6 +1918,7 @@ namespace espressopp {
 		.add_property("realkinmass", &VelocityVerletPI::getRealKinMass, &VelocityVerletPI::setRealKinMass)
 		.add_property("constkinmass", &VelocityVerletPI::getConstKinMass, &VelocityVerletPI::setConstKinMass)
         .add_property("verletList", &VelocityVerletPI::getVerletList, &VelocityVerletPI::setVerletList)
+        .add_property("verletlistBuilds", &VelocityVerletPI::getVerletlistBuilds)
         ;
     }
   }

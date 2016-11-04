@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -46,12 +46,12 @@ namespace espressopp {
             table = make_shared <InterpolationLinear> ();
             table->read(world, _filename);
         }
-        
+
         else if (itype == 2) { // create a new InterpolationAkima
             table = make_shared <InterpolationAkima> ();
             table->read(world, _filename);
         }
-        
+
         else if (itype == 3) { // create a new InterpolationCubic
             table = make_shared <InterpolationCubic> ();
             table->read(world, _filename);
@@ -61,6 +61,7 @@ namespace espressopp {
     typedef class VerletListInteractionTemplate <Tabulated> VerletListTabulated;
     typedef class VerletListAdressInteractionTemplate <Tabulated, Tabulated> VerletListAdressTabulated;
     typedef class VerletListHadressInteractionTemplate <Tabulated, Tabulated> VerletListHadressTabulated;
+    typedef class VerletListHadressInteractionTemplate <Tabulated, LennardJones> VerletListHadressTabulatedLJ;
     typedef class VerletListPIadressInteractionTemplate <Tabulated, Tabulated> VerletListPIadressTabulated;
     typedef class VerletListPIadressInteractionTemplate <Tabulated, LennardJones> VerletListPIadressTabulatedLJ;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
@@ -72,14 +73,14 @@ namespace espressopp {
     //////////////////////////////////////////////////
     void Tabulated::registerPython() {
       using namespace espressopp::python;
-     
+
       class_ <Tabulated, bases <Potential> >
         ("interaction_Tabulated", init <int, const char*, real>())
             .add_property("filename", &Tabulated::getFilename, &Tabulated::setFilename)
             .def_pickle(Tabulated_pickle())
         ;
-     
-      class_ <VerletListTabulated, bases <Interaction> > 
+
+      class_ <VerletListTabulated, bases <Interaction> >
         ("interaction_VerletListTabulated", init <shared_ptr<VerletList> >())
             .def("setPotential", &VerletListTabulated::setPotential)
             .def("getPotential", &VerletListTabulated::getPotentialPtr)
@@ -93,7 +94,7 @@ namespace espressopp {
             .def("setPotentialAT", &VerletListAdressTabulated::setPotentialAT)
             .def("setPotentialCG", &VerletListAdressTabulated::setPotentialCG);
         ;
-        
+
       class_ <VerletListHadressTabulated, bases <Interaction> >
         ("interaction_VerletListHadressTabulated",
            init <shared_ptr<VerletListAdress>,
@@ -102,7 +103,16 @@ namespace espressopp {
             .def("setPotentialAT", &VerletListHadressTabulated::setPotentialAT)
             .def("setPotentialCG", &VerletListHadressTabulated::setPotentialCG);
         ;
-        
+
+      class_ <VerletListHadressTabulatedLJ, bases <Interaction> >
+        ("interaction_VerletListHadressTabulatedLJ",
+           init <shared_ptr<VerletListAdress>,
+                 shared_ptr<FixedTupleListAdress> >()
+                )
+            .def("setPotentialAT", &VerletListHadressTabulatedLJ::setPotentialAT)
+            .def("setPotentialCG", &VerletListHadressTabulatedLJ::setPotentialCG);
+        ;
+
       class_ <VerletListPIadressTabulated, bases <Interaction> >
         ("interaction_VerletListPIadressTabulated",
            init <shared_ptr<VerletListAdress>,
@@ -126,16 +136,16 @@ namespace espressopp {
             .def("setPotentialQM", &VerletListPIadressTabulatedLJ::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressTabulatedLJ::setPotentialCL);
         ;
-     
-      class_ <CellListTabulated, bases <Interaction> > 
+
+      class_ <CellListTabulated, bases <Interaction> >
         ("interaction_CellListTabulated", init <shared_ptr <storage::Storage> >())
             .def("setPotential", &CellListTabulated::setPotential);
         ;
-        
-      class_ <FixedPairListTabulated, bases <Interaction> > 
-        ("interaction_FixedPairListTabulated", 
-          init <shared_ptr<System>, 
-                shared_ptr<FixedPairList>, 
+
+      class_ <FixedPairListTabulated, bases <Interaction> >
+        ("interaction_FixedPairListTabulated",
+          init <shared_ptr<System>,
+                shared_ptr<FixedPairList>,
                 shared_ptr<Tabulated> >()
         )
         .def(init< shared_ptr<System>, shared_ptr<FixedPairListAdress>, shared_ptr<Tabulated> >())
@@ -143,10 +153,10 @@ namespace espressopp {
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
-        
-      class_ <FixedPairListPIadressTabulated, bases <Interaction> > 
-        ("interaction_FixedPairListPIadressTabulated", 
-          init <shared_ptr<System>, 
+
+      class_ <FixedPairListPIadressTabulated, bases <Interaction> >
+        ("interaction_FixedPairListPIadressTabulated",
+          init <shared_ptr<System>,
                 shared_ptr<FixedPairList>,
                 shared_ptr<FixedTupleListAdress>,
                 shared_ptr<Tabulated>,
@@ -158,8 +168,8 @@ namespace espressopp {
         .def("setFixedPairList", &FixedPairListTabulated::setFixedPairList)
         .def("getFixedPairList", &FixedPairListTabulated::getFixedPairList);
         ;
-        
+
     }
-    
+
   }
 }

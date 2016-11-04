@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -44,7 +44,7 @@ namespace espressopp {
         : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), KTI(_KTI){
         LOG4ESPP_INFO(theLogger, "construct Adress");
         type = Extension::Adress;
-        
+
         // AdResS stuff
         dhy = verletList->getHy();
         pidhy2 = M_PI/(dhy * 2.0);
@@ -78,7 +78,7 @@ namespace espressopp {
         // connection to after runInit()
         _SetPosVel = integrator->runInit.connect(
                 boost::bind(&Adress::SetPosVel, this), boost::signals2::at_front);
-        
+
         // connection to after initForces()
         _initForces = integrator->aftInitF.connect(
                 boost::bind(&Adress::initForces, this), boost::signals2::at_front);
@@ -94,31 +94,31 @@ namespace espressopp {
         // connection to after integrate2()
         _integrate2 = integrator->aftIntV.connect(
                 boost::bind(&Adress::integrate2, this), boost::signals2::at_front);
-        
+
         // Note: Both this extension as well as Langevin Thermostat access singal aftCalcF. This might lead to undefined behavior.
         // Therefore, we use other signals here, to make sure the Thermostat would be always called first, before force distributions take place.
         // connection to after _aftCalcF()
         //_aftCalcF = integrator->aftCalcF.connect(
-        //        boost::bind(&Adress::aftCalcF, this));        
-        
+        //        boost::bind(&Adress::aftCalcF, this));
+
         // connection to after _recalc2()
         _recalc2 = integrator->recalc2.connect(
                 boost::bind(&Adress::aftCalcF, this), boost::signals2::at_front);
-        
+
         // connection to after _befIntV()
         _befIntV = integrator->befIntV.connect(
                 boost::bind(&Adress::aftCalcF, this), boost::signals2::at_front);
     }
 
-    
+
     void Adress::SetPosVel(){
 
         System& system = getSystemRef();
-        
+
         // Set the positions and velocity of CG particles & update weights.
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-        
+
               Particle &vp = *cit;
 
               FixedTupleListAdress::iterator it3;
@@ -187,19 +187,19 @@ namespace espressopp {
                              real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
                              //std::cout << pa << " " << sqrt(distsq1) << "\n";
                              if (distsq1 < min1sq) min1sq = distsq1;
-                      
+
                         }
                       }
 
-                      real w = weight(min1sq);                  
-                      vp.lambda() = w;                  
+                      real w = weight(min1sq);
+                      vp.lambda() = w;
                       //weights.insert(std::make_pair(&vp, w));
 
                       real wDeriv = weightderivative(sqrt(min1sq));
                       vp.lambdaDeriv() = wDeriv;
-                  
+
                   }
-                  
+
               }
               else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -207,12 +207,12 @@ namespace espressopp {
                   exit(1);
                   return;
               }
-            
-            
-        }         
-        
-    }    
-    
+
+
+        }
+
+    }
+
 
     void Adress::initForces(){
 
@@ -249,14 +249,14 @@ namespace espressopp {
         ParticleList& adrATparticles = system.storage->getAdrATParticles();
         for (std::vector<Particle>::iterator it = adrATparticles.begin();
                 it != adrATparticles.end(); it++) {
-            
+
             //if(it->id()==2135){
             //   std::cout << "Force of atomistic particle (AdResS. sim.) with id " << it->id() << " is: " << std::setprecision(15) << it->force() << "\n";  // FOR DEBUGGING
             //}
-            
+
             //std::cout << "Force of atomistic particle (AdResS. sim.) with id " << it->id() << " is: " << std::setprecision(15) << it->force() << "\n";  // FOR DEBUGGING
             //std::cout << "Position of atomistic particle (AdResS. sim.) with id " << it->id() << " is: " << std::setprecision(15) << it->position() << "\n";
-            
+
             real sqDist = 0.0;
             real dtfm = 0.5 * dt / it->mass();
 
@@ -271,13 +271,13 @@ namespace espressopp {
             //std::cout << " to (" << it->position() << ") " << sqrt(sqDist) << "\n";
 
             maxSqDist = std::max(maxSqDist, sqDist);
-        }               
-        
+        }
+
         // Set the positions and velocity of CG particles & update weights.
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-        
-            
+
+
               Particle &vp = *cit;
 
               FixedTupleListAdress::iterator it3;
@@ -314,7 +314,7 @@ namespace espressopp {
                   vp.velocity() = cmv;
 
                   if (KTI == false) {
-                  
+
                       // calculate distance to nearest adress particle or center
                       std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
                       Real3D pa = **it2; // position of adress particle
@@ -351,13 +351,13 @@ namespace espressopp {
                       }
 
 
-                      real w = weight(min1sq);                  
-                      vp.lambda() = w;                  
+                      real w = weight(min1sq);
+                      vp.lambda() = w;
                       //weights.insert(std::make_pair(&vp, w));
 
                       real wDeriv = weightderivative(sqrt(min1sq));
                       vp.lambdaDeriv() = wDeriv;
-                      
+
                       // This loop is required when applying routines which use atomistic lambdas.
                       /*for (std::vector<Particle*>::iterator it2 = atList.begin();
                                        it2 != atList.end(); ++it2) {
@@ -365,9 +365,9 @@ namespace espressopp {
                           at.lambda() = vp.lambda();
                           at.lambdaDeriv() = vp.lambdaDeriv();
                       }*/
-                  
+
                   }
-                  
+
               }
               else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -375,9 +375,9 @@ namespace espressopp {
                   exit(1);
                   return;
               }
-            
-            
-        } 
+
+
+        }
 
         //std::cout << " " << maxSqDist << "\n";
     }
@@ -398,11 +398,11 @@ namespace espressopp {
             // Propagate velocities: v(t+0.5*dt) = v(t) + 0.5*dt * f(t)
             it->velocity() += dtfm * it->force();
         }
-        
+
         //Update CG velocities
         CellList localCells = system.storage->getLocalCells();
-        for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {       
-            
+        for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
+
               Particle &vp = *cit;
 
               FixedTupleListAdress::iterator it3;
@@ -437,7 +437,7 @@ namespace espressopp {
                   // update (overwrite) the position and velocity of the VP
                   //vp.position() = cmp;
                   vp.velocity() = cmv;
-                  
+
               }
               else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -445,12 +445,12 @@ namespace espressopp {
                   exit(1);
                   return;
               }
-            
-            
+
+
         }
-        
-        
-        
+
+
+
     }
 
     void Adress::communicateAdrPositions(){
@@ -475,28 +475,28 @@ namespace espressopp {
           mpi::broadcast(*getSystem()->comm,verletList->adrPositions,root); // only necessary for moving adrCenter
        }
     }
-    
-    
-    
+
+
+
     // AdResS Weighting function
     real Adress::weight(real distanceSqr){
         if (dex2 > distanceSqr) return 1.0;
         else if (dexdhy2 < distanceSqr) return 0.0;
         else {
             real argument = sqrt(distanceSqr) - dex;
-            return 1.0-(30.0/(pow(dhy, 5.0)))*(1.0/5.0*pow(argument, 5.0)-dhy/2.0*pow(argument, 4.0)+1.0/3.0*pow(argument, 3.0)*dhy*dhy);
-            //return pow(cos(pidhy2 * argument),2.0); // for cosine squared weighting function
+            // return 1.0-(30.0/(pow(dhy, 5.0)))*(1.0/5.0*pow(argument, 5.0)-dhy/2.0*pow(argument, 4.0)+1.0/3.0*pow(argument, 3.0)*dhy*dhy);
+            return pow(cos(pidhy2 * argument),2.0); // for cosine squared weighting function
         }
     }
     real Adress::weightderivative(real distance){
         real argument = distance - dex;
-        return -(30.0/(pow(dhy, 5.0)))*(pow(argument, 4.0)-2.0*dhy*pow(argument, 3.0)+argument*argument*dhy*dhy);
-        //return -pidhy2 * 2.0 * cos(pidhy2*argument) * sin(pidhy2*argument); // for cosine squared weighting function
+        // return -(30.0/(pow(dhy, 5.0)))*(pow(argument, 4.0)-2.0*dhy*pow(argument, 3.0)+argument*argument*dhy*dhy);
+        return -pidhy2 * 2.0 * cos(pidhy2*argument) * sin(pidhy2*argument); // for cosine squared weighting function
     }
 
-    
-    
-    void Adress::aftCalcF(){        
+
+
+    void Adress::aftCalcF(){
         System& system = getSystemRef();
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
@@ -520,7 +520,7 @@ namespace espressopp {
                 Particle &at = **it2;
 
                 //vp.force() +=  (vp.getMass() * at.force()) / (3.0 * at.mass());
-                
+
                 at.force() += at.mass() * vpfm;
                 //std::cout << "Force of atomistic particle (AdResS sim.) with id " << at.id() << " is: " << at.force() << "\n";
             }
@@ -532,7 +532,7 @@ namespace espressopp {
             return;
         }
       }
-      
+
       /*for (std::set<Particle*>::iterator it=cgZone.begin();
                     it != cgZone.end(); ++it) {
 
@@ -550,9 +550,9 @@ namespace espressopp {
                 for (std::vector<Particle*>::iterator itv = atList1.begin();
                         itv != atList1.end(); ++itv) {
                     Particle &at = **itv;
-                    
+
                     //vp.force() +=  (vp.getMass() * at.force()) / (3.0 * at.mass());
-                    
+
                     // at.velocity() = vp.velocity(); // overwrite velocity
                     at.force() += at.mass() * vpfm;
                     //std::cout << "f" << at.mass() * vpfm << " m " << at.mass() << " M "<<  vp.getMass() << " id " << at.id() << std::endl;
@@ -566,9 +566,9 @@ namespace espressopp {
             }
       }*/
     }
-    
-    
-    
+
+
+
     /****************************************************
     ** REGISTRATION WITH PYTHON
     ****************************************************/
