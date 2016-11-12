@@ -23,6 +23,7 @@
 #include "python.hpp"
 #include "LennardJones.hpp"
 #include "Tabulated.hpp"
+#include "Harmonic.hpp"
 #include "VerletListInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListAdressATInteractionTemplate.hpp"
@@ -47,6 +48,8 @@ namespace espressopp {
         VerletListAdressCGLennardJones;
     typedef class VerletListAdressInteractionTemplate <LennardJones, LennardJones>
         VerletListAdressLennardJones2;
+        typedef class VerletListAdressInteractionTemplate <LennardJones, Harmonic>
+        VerletListAdressLennardJonesHarmonic;
     typedef class VerletListHadressInteractionTemplate <LennardJones, Tabulated>
         VerletListHadressLennardJones;
     typedef class VerletListHadressATInteractionTemplate <LennardJones>
@@ -55,6 +58,8 @@ namespace espressopp {
         VerletListHadressCGLennardJones;
     typedef class VerletListHadressInteractionTemplate <LennardJones, LennardJones>
         VerletListHadressLennardJones2;
+    typedef class VerletListHadressInteractionTemplate <LennardJones, Harmonic>
+        VerletListHadressLennardJonesHarmonic;
     typedef class CellListAllPairsInteractionTemplate <LennardJones>
         CellListLennardJones;
     typedef class FixedPairListInteractionTemplate <LennardJones>
@@ -121,6 +126,14 @@ namespace espressopp {
         .def("setPotentialCG", &VerletListAdressLennardJones2::setPotentialCG);
       ;
 
+      class_< VerletListAdressLennardJonesHarmonic, bases< Interaction > >
+        ("interaction_VerletListAdressLennardJonesHarmonic",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotentialAT", &VerletListAdressLennardJonesHarmonic::setPotentialAT)
+        .def("setPotentialCG", &VerletListAdressLennardJonesHarmonic::setPotentialCG);
+      ;
+
       class_< VerletListHadressATLennardJones, bases< Interaction > >
         ("interaction_VerletListHadressATLennardJones",
            init< shared_ptr<VerletListAdress>,
@@ -153,6 +166,14 @@ namespace espressopp {
                   shared_ptr<FixedTupleListAdress> >())
         .def("setPotentialAT", &VerletListHadressLennardJones2::setPotentialAT)
         .def("setPotentialCG", &VerletListHadressLennardJones2::setPotentialCG);
+      ;
+
+      class_< VerletListHadressLennardJonesHarmonic, bases< Interaction > >
+        ("interaction_VerletListHadressLennardJonesHarmonic",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotentialAT", &VerletListHadressLennardJonesHarmonic::setPotentialAT)
+        .def("setPotentialCG", &VerletListHadressLennardJonesHarmonic::setPotentialCG);
       ;
 
       class_< CellListLennardJones, bases< Interaction > >
