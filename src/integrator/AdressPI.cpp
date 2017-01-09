@@ -3,21 +3,21 @@
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -44,7 +44,7 @@ namespace espressopp {
         : Extension(_system), verletList(_verletList), fixedtupleList(_fixedtupleList), ntrotter(_ntrotter), clmassmultiplier(_clmassmultiplier), KTI(_KTI){
         LOG4ESPP_INFO(theLogger, "construct AdressPI");
         type = Extension::Adress;
-        
+
         // AdResS PI stuff
         dhy = verletList->getHy();
         pidhy2 = M_PI/(dhy * 2.0);
@@ -74,7 +74,7 @@ namespace espressopp {
         // connection to after runInit()
         _SetPosVel = integrator->runInit.connect(
                 boost::bind(&AdressPI::SetPosVel, this), boost::signals2::at_front);
-        
+
         // connection to after initForces()
         _initForces = integrator->aftInitF.connect(
                 boost::bind(&AdressPI::initForces, this), boost::signals2::at_front);
@@ -82,21 +82,21 @@ namespace espressopp {
         // connection to inside of integrate1()
         _setweights = integrator->recalc2.connect(
                 boost::bind(&AdressPI::setweights, this), boost::signals2::at_front);
-        
+
         // connection to after _aftCalcFPI()
         _aftCalcF = integrator->aftCalcFPI.connect(
                 boost::bind(&AdressPI::aftCalcF, this), boost::signals2::at_back);
     }
 
-    
+
     void AdressPI::SetPosVel(){
 
         System& system = getSystemRef();
-        
+
         // Set the positions and velocity of CG particles & update weights.
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-        
+
               Particle &vp = *cit;
 
               FixedTupleListAdress::iterator it3;
@@ -114,11 +114,13 @@ namespace espressopp {
                                        it2 != atList.end(); ++it2) {
                       Particle &at = **it2;
                       cmp += at.position();
-                      if(at.pib() == 1)
-                      {
-                          cmv = (1.0/sqrt(ntrotter)) * at.velocity();
-                      }
+                      cmv += at.velocity();
+                      // if(at.pib() == 1)
+                      // {
+                      //     cmv = (1.0/sqrt(ntrotter)) * at.velocity(); //?????
+                      // }
                   }
+                  cmv /= ntrotter;
                   cmp /= ntrotter;
 
                   // update (overwrite) the position and velocity of the VP
@@ -158,17 +160,17 @@ namespace espressopp {
                              real distsq1 = d1[0]*d1[0];                                                           // X SPLIT VS SPHERE CHANGE
                              //std::cout << pa << " " << sqrt(distsq1) << "\n";
                              if (distsq1 < min1sq) min1sq = distsq1;
-                      
+
                         }
                       }
 
-                      real w = weight(min1sq);                  
-                      vp.lambda() = w;                  
+                      real w = weight(min1sq);
+                      vp.lambda() = w;
                       real wDeriv = weightderivative(sqrt(min1sq));
                       vp.lambdaDeriv() = wDeriv;
                       vp.varmass() = vp.mass()*( w*(1.0-clmassmultiplier) + clmassmultiplier );
                   }
-                  
+
               }
               else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -176,12 +178,12 @@ namespace espressopp {
                   exit(1);
                   return;
               }
-            
-            
-        }         
-        
-    }    
-    
+
+
+        }
+
+    }
+
 
     void AdressPI::initForces(){
 
@@ -214,12 +216,12 @@ namespace espressopp {
     void AdressPI::setweights(){
 
         System& system = getSystemRef();
-        
+
         // Set the positions and velocity of CG particles & update weights.
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-        
-            
+
+
               Particle &vp = *cit;
 
               FixedTupleListAdress::iterator it3;
@@ -228,7 +230,7 @@ namespace espressopp {
               if (it3 != fixedtupleList->end()) {
 
                   if (KTI == false) {
-                  
+
                       // calculate distance to nearest adress particle or center
                       std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
                       Real3D pa = **it2; // position of adress particle
@@ -265,13 +267,13 @@ namespace espressopp {
                       }
 
 
-                      real w = weight(min1sq);                  
-                      vp.lambda() = w;                  
+                      real w = weight(min1sq);
+                      vp.lambda() = w;
                       real wDeriv = weightderivative(min1sq);
                       vp.lambdaDeriv() = wDeriv;
                       vp.varmass() = vp.mass()*( w*(1.0-clmassmultiplier) + clmassmultiplier );
                   }
-                  
+
               }
               else { // this should not happen
                   std::cout << " VP particle " << vp.id() << "-" << vp.ghost() << " not found in tuples ";
@@ -279,11 +281,11 @@ namespace espressopp {
                   exit(1);
                   return;
               }
-            
-            
-        } 
+
+
+        }
     }
-    
+
     // AdResS Weighting function
     real AdressPI::weight(real distanceSqr){
         if (dex2 >= distanceSqr) return 1.0;
@@ -303,7 +305,7 @@ namespace espressopp {
         }
     }
 
-    void AdressPI::aftCalcF(){ 
+    void AdressPI::aftCalcF(){
         System& system = getSystemRef();
         CellList localCells = system.storage->getLocalCells();
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
@@ -334,9 +336,9 @@ namespace espressopp {
         }
       }
     }
-    
-    
-    
+
+
+
     /****************************************************
     ** REGISTRATION WITH PYTHON
     ****************************************************/
