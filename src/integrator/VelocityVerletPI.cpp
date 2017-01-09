@@ -104,7 +104,7 @@ namespace espressopp {
     	std::cout << "CMDparameter: " << CMDparameter << "\n\n";*/
 
       // Check if Eigenvalues start with zero:
-      if(Eigenvalues.at(0) > 0.00000000001){
+      if(Eigenvalues[0] > 0.00000000001){
         std::cout << "Eigenvalues don't start with zero!\n";
         exit(1);
         return;
@@ -362,7 +362,7 @@ namespace espressopp {
 									Particle &at2 = **it5;
 									if(at2.pib() != 1){
 										if(realkinmass == false){
-											xi += at2.modemom().sqr()/(Eigenvalues.at(at2.pib()-1));
+											xi += at2.modemom().sqr()/(Eigenvalues[at2.pib()-1]);
 										}
 										else{
 											xi += at2.modemom().sqr();
@@ -396,7 +396,8 @@ namespace espressopp {
 								min1sq = sqrt(min1sq);   // distance to nearest adress particle or center
 								real mindriftforceX = (1.0/min1sq)*mindriftforce[0];  // normalized driftforce vector
 
-								mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(vp.varmass()*vp.varmass()*sqrt(ntrotter)*CMDparameter);                                                              // X SPLIT VS SPHERE CHANGE
+								// mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*xi*vp.lambdaDeriv()/(vp.varmass()*vp.varmass()*sqrt(ntrotter)*CMDparameter);                                                              // X SPLIT VS SPHERE CHANGE
+                                             mindriftforceX *= 0.5*(clmassmultiplier-1.0)*vp.mass()*sqrt(ntrotter)*xi*vp.lambdaDeriv()/(vp.varmass()*vp.varmass()*CMDparameter);                                                              // X SPLIT VS SPHERE CHANGE
 								Real3D driftforceadd(mindriftforceX,0.0,0.0);
 
 								at.modemom() += half_dt * (at.forcem() - driftforceadd);
@@ -404,7 +405,8 @@ namespace espressopp {
 							else{
 								at.modemom() += half_dt * at.forcem();
 							}
-							vp.velocity() = (1.0/sqrt(ntrotter)) * at.modemom()/(vp.mass());
+							// vp.velocity() = (1.0/sqrt(ntrotter)) * at.modemom()/(vp.mass());
+                                       vp.velocity() = sqrt(ntrotter) * at.modemom()/(vp.mass());
 							break;
 
 						}
@@ -454,7 +456,8 @@ namespace espressopp {
 							at.modemom() += half_dt * at.forcem();
 							if(at.pib() == 1)
 							{
-								vp.velocity() = (1.0/sqrt(ntrotter)) * at.modemom()/(vp.mass());
+								// vp.velocity() = (1.0/sqrt(ntrotter)) * at.modemom()/(vp.mass());
+                                             vp.velocity() = sqrt(ntrotter) * at.modemom()/(vp.mass());
 							}
 						}
 					}
@@ -485,7 +488,7 @@ namespace espressopp {
 
             if (constkinmass == false){ // kinetic mass also changes - hence, second decomposition level required
 
-				real half_dt4 = 0.25 * dt / (vp.mass());
+				real half_dt4 = 0.25 * ntrotter *  dt / (vp.mass());
 
 				FixedTupleListAdress::iterator it3;
 				it3 = fixedtupleList->find(&vp);
@@ -543,7 +546,7 @@ namespace espressopp {
 					}
 
 					// half_dt2 loop without centroid mode
-					real half_dt = 0.5 * dt / (CMDparameter * vp.varmass());
+					real half_dt = 0.5 * ntrotter * dt / (CMDparameter * vp.varmass());
 					for (std::vector<Particle*>::iterator it2 = atList.begin();
 										   it2 != atList.end(); ++it2) {
 						Particle &at = **it2;
@@ -553,7 +556,7 @@ namespace espressopp {
 						}
 						else{
 							if(realkinmass == false){
-								at.modepos() += half_dt * at.modemom() / (Eigenvalues.at(at.pib()-1));
+								at.modepos() += half_dt * at.modemom() / (Eigenvalues[at.pib()-1]);
 							}
 							else{
 								at.modepos() += half_dt * at.modemom();
@@ -621,7 +624,7 @@ namespace espressopp {
             }
             else { // constant kinetic mass - hence, no second decomposition level required
 
-            	real half_dt = 0.5 * dt / (vp.mass());
+            	real half_dt = 0.5 * ntrotter * dt / (vp.mass());
 
 				FixedTupleListAdress::iterator it3;
 				it3 = fixedtupleList->find(&vp);
@@ -680,7 +683,7 @@ namespace espressopp {
 								continue;
 							}else{
 								if(realkinmass == false){
-									at.modepos() += half_dt * at.modemom() / (CMDparameter * Eigenvalues.at(at.pib()-1));
+									at.modepos() += half_dt * at.modemom() / (CMDparameter * Eigenvalues[at.pib()-1]);
 								}
 								else{
 									at.modepos() += half_dt * at.modemom() / CMDparameter;
@@ -710,7 +713,8 @@ namespace espressopp {
     void VelocityVerletPI::OUintegrate()
     {
         real prefac1 = exp(-gamma*dt);
-        real prefac2 = sqrt(12.0*temperature*( 1.0-exp(-2.0*gamma*dt) ));
+        // real prefac2 = sqrt(12.0*temperature*( 1.0-exp(-2.0*gamma*dt) ));
+        real prefac2 = sqrt(12.0*temperature*( 1.0-exp(-2.0*gamma*dt) ) / ntrotter);
         // careful with 12... it's because the uniform distribution needs to have the same width as the Gaussian one.
         // also note that kb is inside temperature, we use gromacs units
 
@@ -736,7 +740,8 @@ namespace espressopp {
                     	if(centroidthermostat == true || vp.lambda() < 1.0){
 							Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
 							at.modemom() = prefac1 * at.modemom() + prefac2*sqrt(vp.mass()) * ranval;
-							vp.velocity() = (1.0/sqrt(ntrotter)) * at.modemom()/(vp.mass());
+							// vp.velocity() = (1.0/sqrt(ntrotter)) * at.modemom()/(vp.mass());
+                                       vp.velocity() = sqrt(ntrotter) * at.modemom()/(vp.mass());
                     	}
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
@@ -744,7 +749,7 @@ namespace espressopp {
                         if(PILE == false){
 							if(constkinmass == false){
 								if(realkinmass == false){
-									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass()*Eigenvalues.at(at.pib()-1))) * ranval;
+									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass()*Eigenvalues[at.pib()-1])) * ranval;
 								}
 								else{
 									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass())) * ranval;
@@ -752,7 +757,7 @@ namespace espressopp {
 							}
 							else{
 								if(realkinmass == false){
-									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass()*Eigenvalues.at(at.pib()-1))) * ranval;
+									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass()*Eigenvalues[at.pib()-1])) * ranval;
 								}
 								else{
 									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass())) * ranval;
@@ -760,9 +765,11 @@ namespace espressopp {
 							}
                         }
                         else{
-                        	real modegamma = 2.0 * PILElambda * sqrt(omega2) * sqrt(Eigenvalues.at(at.pib()-1));
+                        	// real modegamma = 2.0 * PILElambda * sqrt(omega2) * sqrt(Eigenvalues.at(at.pib()-1));
+                            real modegamma = 2.0 * PILElambda * sqrt(omega2 * ntrotter) * sqrt(Eigenvalues[at.pib()-1]);
                         	real prefac1_PILE = exp(-modegamma*dt);
-                        	real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ));
+                        	// real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ));
+                            real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ) / ntrotter );
 							if(constkinmass == false){
 								at.modemom() = prefac1_PILE * at.modemom() + (prefac2_PILE*sqrt(CMDparameter*vp.varmass())) * ranval;
 							}
@@ -819,10 +826,11 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() <= ntrotter){
-                              at.position()+= at2.modepos()*Tvectors.at(at.pib()-1).at(at2.pib()-1);
+                              at.position()+= at2.modepos()*Tvectors[at.pib()-1][at2.pib()-1];
                               if((at2.pib() == 1) && (at.pib() == 1)){
                                   vp.position() = (1.0/sqrt(ntrotter)) * at2.modepos();
-                                  vp.velocity() = (1.0/sqrt(ntrotter)) * at2.modemom()/(vp.mass());
+                                  // vp.velocity() = (1.0/sqrt(ntrotter)) * at2.modemom()/(vp.mass());
+                                  vp.velocity() = sqrt(ntrotter) * at2.modemom()/(vp.mass());
                               }
                           }
                           else{
@@ -879,7 +887,7 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() <= ntrotter){
-                              at.modepos()+= at2.position()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                              at.modepos()+= at2.position()*Eigenvectors[at.pib()-1][at2.pib()-1];
                           }
                           else{
                                std::cout << "at2.pib() outside of trotter range in transPos2 routine (VelocityVerletPI) \n";
@@ -932,23 +940,28 @@ namespace espressopp {
                         	  if(at2.pib() > 1 && at2.pib() <= ntrotter){
                                     if(constkinmass == false){
                             		  if(realkinmass == false){
-                            			  at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/((Eigenvalues.at(at2.pib()-1))*CMDparameter*vp.varmass());
+                            			  // at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/((Eigenvalues.at(at2.pib()-1))*CMDparameter*vp.varmass());
+                                               at.velocity()+= at2.modemom()*Tvectors[at.pib()-1][at2.pib()-1]*ntrotter/((Eigenvalues[at2.pib()-1])*CMDparameter*vp.varmass());
                             		  }
                             		  else{
-                            			  at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/(CMDparameter*vp.varmass());
+                            			  // at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/(CMDparameter*vp.varmass());
+                                               at.velocity()+= at2.modemom()*Tvectors[at.pib()-1][at2.pib()-1]*ntrotter/(CMDparameter*vp.varmass());
                             		  }
                                     }
                                     else{
                                          if(realkinmass == false){
-                                               at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/((Eigenvalues.at(at2.pib()-1))*CMDparameter*vp.mass());
+                                               // at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/((Eigenvalues.at(at2.pib()-1))*CMDparameter*vp.mass());
+                                               at.velocity()+= at2.modemom()*Tvectors[at.pib()-1][at2.pib()-1]*ntrotter/((Eigenvalues[at2.pib()-1])*CMDparameter*vp.mass());
                                          }
                                          else{
-                                               at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/(CMDparameter*vp.mass());
+                                               // at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/(CMDparameter*vp.mass());
+                                               at.velocity()+= at2.modemom()*Tvectors[at.pib()-1][at2.pib()-1]*ntrotter/(CMDparameter*vp.mass());
                                          }
                                     }
                         	  }
                         	  else if(at2.pib() == 1){
-                        		  at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/(vp.mass());
+                        		  // at.velocity()+= at2.modemom()*Tvectors.at(at.pib()-1).at(at2.pib()-1)/(vp.mass());
+                                    at.velocity()+= at2.modemom()*Tvectors[at.pib()-1][at2.pib()-1]*ntrotter/(vp.mass());
                         	  }
                         	  else{
                         		  std::cout << "at2.pib() outside of trotter range in transMom1 routine (VelocityVerletPI) \n";
@@ -957,7 +970,8 @@ namespace espressopp {
                         	  }
 
                               if((at2.pib() == 1) && (at.pib() == 1)){
-                                  vp.velocity() = (1.0/sqrt(ntrotter)) * at2.modemom()/(vp.mass());
+                                  // vp.velocity() = (1.0/sqrt(ntrotter)) * at2.modemom()/(vp.mass());
+                                vp.velocity() = sqrt(ntrotter) * at2.modemom()/(vp.mass());
                               }
 
                           }
@@ -1012,7 +1026,7 @@ namespace espressopp {
                           Particle &at2 = **it5;
 
                           if(at.pib() <= ntrotter){
-                              at.modemom()+= at2.velocity()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                              at.modemom()+= at2.velocity()*Eigenvectors[at.pib()-1][at2.pib()-1];
                           }
                           else{
                                std::cout << "at2.pib() outside of trotter range in transPos2 routine (VelocityVerletPI) \n";
@@ -1024,23 +1038,28 @@ namespace espressopp {
                       if(at.pib() > 1 && at.pib() <= ntrotter){
                           if(constkinmass == false){
                             	if(realkinmass == false){
-                    			  at.modemom() *= (vp.varmass()*CMDparameter* (Eigenvalues.at(at.pib()-1)));
+                    			  // at.modemom() *= (vp.varmass()*CMDparameter* (Eigenvalues.at(at.pib()-1)));
+                                    at.modemom() *= (vp.varmass()*CMDparameter* (Eigenvalues[at.pib()-1])/ntrotter);
                     		  	}
                     		  	else{
-                    			  at.modemom() *= (vp.varmass()*CMDparameter);
+                    			  // at.modemom() *= (vp.varmass()*CMDparameter);
+                                    at.modemom() *= (vp.varmass()*CMDparameter/ntrotter);
                     		  	}
                           }
                           else{
                                   if(realkinmass == false){
-                                    at.modemom() *= (vp.mass()*CMDparameter* (Eigenvalues.at(at.pib()-1)));
+                                    // at.modemom() *= (vp.mass()*CMDparameter* (Eigenvalues.at(at.pib()-1)));
+                                    at.modemom() *= (vp.mass()*CMDparameter* (Eigenvalues[at.pib()-1])/ntrotter);
                                   }
                                   else{
-                                    at.modemom() *= (vp.mass()*CMDparameter);
+                                    // at.modemom() *= (vp.mass()*CMDparameter);
+                                    at.modemom() *= (vp.mass()*CMDparameter/ntrotter);
                                   }
                           }
                       }
                       else if(at.pib() == 1){
-                			at.modemom() *= vp.mass();
+                			// at.modemom() *= vp.mass();
+                            at.modemom() *= vp.mass()/ntrotter;
                       }
                       else{
                           std::cout << "at.pib() outside of trotter range in transMom2 routine (VelocityVerletPI) \n";
@@ -1088,7 +1107,7 @@ namespace espressopp {
                         	  at.forcem()+= (1.0/sqrt(ntrotter))* at2.force();
                           }
                           else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        	  at.forcem()+= at2.force()*Eigenvectors.at(at.pib()-1).at(at2.pib()-1);
+                        	  at.forcem()+= at2.force()*Eigenvectors[at.pib()-1][at2.pib()-1];
                           }
                           else{
                                std::cout << "at.pib() outside of trotter range in TransForce routine (VelocityVerletPI) \n";
@@ -1168,7 +1187,7 @@ namespace espressopp {
                                   Particle &at = **it3;
 
                                   if(at.pib() > 1 && at.pib() <= ntrotter){
-                                    at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues.at(at.pib()-1);
+                                    at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues[at.pib()-1];
                                   }
                                   else if(at.pib() == 1){
                                 	  if(vp.lambda()<1.0 && vp.lambda()>0.0){
@@ -1177,7 +1196,7 @@ namespace espressopp {
                                                      it5 != atList.end(); ++it5) {
                                             Particle &at2 = **it5;
                                             if(at2.pib() != 1){
-                                            	xi += -0.5*(clmassmultiplier-1.0)*(1.0/sqrt(ntrotter))*vp.lambdaDeriv()*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            	xi += -0.5*(clmassmultiplier-1.0)*(1.0/sqrt(ntrotter))*vp.lambdaDeriv()*vp.mass()*omega2*at2.modepos().sqr()*Eigenvalues[at2.pib()-1];
                                             }
                                         }
 
@@ -1244,7 +1263,7 @@ namespace espressopp {
                               Particle &at = **it3;
 
                               if(at.pib() > 1 && at.pib() <= ntrotter){
-                                at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues.at(at.pib()-1);
+                                at.forcem() -= at.modepos()*omega2*vp.varmass()*Eigenvalues[at.pib()-1];
                               }
                               else if(at.pib() == 1){
                                 if(vp.lambda()<1.0 && vp.lambda()>0.0)
@@ -1254,7 +1273,7 @@ namespace espressopp {
                                                  it5 != atList.end(); ++it5) {
                                         Particle &at2 = **it5;
                                         if(at2.pib() != 1){
-                                            xi += at2.modepos().sqr()*Eigenvalues.at(at2.pib()-1);
+                                            xi += at2.modepos().sqr()*Eigenvalues[at2.pib()-1];
                                         }
                                     }
 
@@ -1395,7 +1414,7 @@ namespace espressopp {
                     Particle &at = **it2;
 
                     if(at.pib() == 1){
-                        esum += at.modemom().sqr() / vp.mass();
+                        esum += at.modemom().sqr() * ntrotter / vp.mass();
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
                         if((speedup == true) && (vp.lambda() < 0.000000001)){
@@ -1403,17 +1422,17 @@ namespace espressopp {
                         }else{
                         	if(constkinmass == false){
                         		if(realkinmass == false){
-                        			esum += at.modemom().sqr() / (vp.varmass()*CMDparameter*Eigenvalues.at(at.pib()-1));
+                        			esum += at.modemom().sqr() * ntrotter / (vp.varmass()*CMDparameter*Eigenvalues[at.pib()-1]);
                         		}
                         		else{
-                        			esum += at.modemom().sqr() / (vp.varmass()*CMDparameter);
+                        			esum += at.modemom().sqr() * ntrotter / (vp.varmass()*CMDparameter);
                         		}
                         	}else{
                         		if(realkinmass == false){
-                        			esum += at.modemom().sqr() / (vp.mass()*CMDparameter*Eigenvalues.at(at.pib()-1));
+                        			esum += at.modemom().sqr() * ntrotter / (vp.mass()*CMDparameter*Eigenvalues[at.pib()-1]);
                         		}
                         		else{
-                        			esum += at.modemom().sqr() / (vp.mass()*CMDparameter);
+                        			esum += at.modemom().sqr() * ntrotter / (vp.mass()*CMDparameter);
                         		}
                         	}
                         }
@@ -1469,7 +1488,7 @@ namespace espressopp {
                         continue;
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        esum += at.modepos().sqr() * omega2 *  (vp.varmass()*Eigenvalues.at(at.pib()-1));
+                        esum += at.modepos().sqr() * omega2 *  (vp.varmass()*Eigenvalues[at.pib()-1]);
                     }
                     else{
                          std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
@@ -1586,10 +1605,10 @@ namespace espressopp {
 						}
 						else if(at.pib() > 1 && at.pib() <= ntrotter){
 							if(realkinmass == false){
-								esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.modemom().sqr()/(vp.varmass()*vp.varmass()*CMDparameter*Eigenvalues.at(at.pib()-1));
+								esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.modemom().sqr()/(vp.varmass()*vp.varmass()*CMDparameter*Eigenvalues[at.pib()-1]);
 							}
 							else{
-								esum += (clmassmultiplier-1.0)*0.5*vp.mass()*at.modemom().sqr()/(vp.varmass()*vp.varmass()*CMDparameter);
+								esum += (clmassmultiplier-1.0)*0.5*vp.mass()*ntrotter*at.modemom().sqr()/(vp.varmass()*vp.varmass()*CMDparameter);
 							}
 						}
 						else{
@@ -1646,7 +1665,7 @@ namespace espressopp {
 							continue;
 						}
 						else if(at.pib() > 1 && at.pib() <= ntrotter){
-							esum -= (clmassmultiplier-1.0)*0.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues.at(at.pib()-1);
+							esum -= (clmassmultiplier-1.0)*0.5*vp.mass()*omega2*at.modepos().sqr()*Eigenvalues[at.pib()-1];
 						}
 						else{
 							 std::cout << "at.pib() outside of trotter range in computeRingEnergy routine (VelocityVerletPI) \n";
