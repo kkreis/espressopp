@@ -189,16 +189,22 @@ namespace espressopp {
         // (Update VP velocities - optional)
         // FULL PSEUDOCODE SCHEME
 
-        if(i==0){ updateForces(3); }
+        if(i==0){
+          updateForces(3);
+          integrateV1(3, false);
+        }
         //updateForces(3);
-        integrateV1(3);
+        // integrateV1(3);
 
         // mstep loop
         for (int j = 0; j < mStep; j++){
 
-            if(j==0){ updateForces(2); }
+            if(j==0){
+              updateForces(2);
+              integrateV1(2, false);
+            }
             //updateForces(2);
-            integrateV1(2);
+            // integrateV1(2);
 
             // lstep loop
             for (int k= 0; k < sStep; k++){
@@ -211,31 +217,68 @@ namespace espressopp {
                 OUintegrate();
                 integrateModePos();
 
-                // Update real positions - don't forget the VP centroid particle (both velocity and position).
-                // Recalculate weights and mass
-                transPos1();
-                // Check the VerletList, maybe rebuild it.
-                if (maxDist > skinHalf) resortFlag = true;
-                if (resortFlag) {
-                    storage.decompose();
-                    verletlistBuilds += 1;
-                    transPos2();
-                    maxDist  = 0.0;
-                    resortFlag = false;
-                }
+                // // Update real positions - don't forget the VP centroid particle (both velocity and position).
+                // // Recalculate weights and mass
+                // transPos1();
+                // // Check the VerletList, maybe rebuild it.
+                // if (maxDist > skinHalf) resortFlag = true;
+                // if (resortFlag) {
+                //     storage.decompose();
+                //     verletlistBuilds += 1;
+                //     transPos2();
+                //     maxDist  = 0.0;
+                //     resortFlag = false;
+                // }
 
                 updateForces(1);
                 integrateV2();
 
             }
 
+            // Update real positions - don't forget the VP centroid particle (both velocity and position).
+            // Recalculate weights and mass
+            transPos1();
+            // // Check the VerletList, maybe rebuild it.
+            // if (maxDist > skinHalf) resortFlag = true;
+            // if (resortFlag) {
+            //     storage.decompose();
+            //     verletlistBuilds += 1;
+            //     transPos2();
+            //     maxDist  = 0.0;
+            //     resortFlag = false;
+            // }
+
             updateForces(2);
-            integrateV1(2);
+
+            if(j==(mStep-1)){
+              integrateV1(2,false);
+            }
+            else{
+              integrateV1(2,true);
+            }
+            // integrateV1(2);
 
         }
 
+        // Check the VerletList, maybe rebuild it.
+        if (maxDist > skinHalf) resortFlag = true;
+        if (resortFlag) {
+            storage.decompose();
+            verletlistBuilds += 1;
+            transPos2();
+            maxDist  = 0.0;
+            resortFlag = false;
+        }
+
         updateForces(3);
-        integrateV1(3);
+
+        if(i==(nsteps-1)){
+          integrateV1(3,false);
+        }
+        else{
+          integrateV1(3,true);
+        }
+        // integrateV1(3);
 
         step++;
       }
@@ -248,14 +291,16 @@ namespace espressopp {
     using namespace boost::python;
 
 
-    void VelocityVerletPI::integrateV1(int t)
+    void VelocityVerletPI::integrateV1(int t, bool doubletime)
     {
         real half_dt = 0.0;
         if (t==2){
-            half_dt = 0.5 * dt2;
+            if(doubletime){half_dt = dt2;}
+            else{half_dt = 0.5 * dt2;}
         }
         else if (t==3){
-            half_dt = 0.5 * dt3;
+            if(doubletime){half_dt = dt3;}
+            else{half_dt = 0.5 * dt3;}
         }
         else{
             std::cout << "integrateV1 routine in VelocityVerletPI integrator received wrong integer.\n";
@@ -376,7 +421,7 @@ namespace espressopp {
 								Real3D mindriftforce(0.0, 0.0, 0.0);
 								//Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
 								//real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
-								verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
+								verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, (1.0/sqrt(ntrotter))*at.modepos(), pa);
 								real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
 								++it2;
 								for (; it2 != verletList->getAdrPositions().end(); ++it2) {
@@ -384,7 +429,7 @@ namespace espressopp {
 									   Real3D driftforce(0.0, 0.0, 0.0);
 									   //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
 									   //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
-									   verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
+									   verletList->getSystem()->bc->getMinimumImageVector(driftforce, (1.0/sqrt(ntrotter))*at.modepos(), pa);
 									   //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
 									   real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
 									   //std::cout << pa << " " << sqrt(distsq1) << "\n";
@@ -1206,7 +1251,7 @@ namespace espressopp {
                                         Real3D mindriftforce(0.0, 0.0, 0.0);
                                         //Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
                                         //real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
-                                        verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
+                                        verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, (1.0/sqrt(ntrotter))*at.modepos(), pa);
                                         real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
                                         ++it2;
                                         for (; it2 != verletList->getAdrPositions().end(); ++it2) {
@@ -1214,7 +1259,7 @@ namespace espressopp {
                                                Real3D driftforce(0.0, 0.0, 0.0);
                                                //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
                                                //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
-                                               verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
+                                               verletList->getSystem()->bc->getMinimumImageVector(driftforce, (1.0/sqrt(ntrotter))*at.modepos(), pa);
                                                //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
                                                real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
                                                if (distsq1 < min1sq) {
@@ -1283,7 +1328,7 @@ namespace espressopp {
                                     Real3D mindriftforce(0.0, 0.0, 0.0);
                                     //Real3D mindriftforce = vp.position() - pa;                                                           // X SPLIT VS SPHERE CHANGE
                                     //real mindriftforce = vp.position()[0] - pa[0];                                                         // X SPLIT VS SPHERE CHANGE
-                                    verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, vp.position(), pa);
+                                    verletList->getSystem()->bc->getMinimumImageVector(mindriftforce, (1.0/sqrt(ntrotter))*at.modepos(), pa);
                                     real min1sq = mindriftforce[0]*mindriftforce[0]; // mindriftforce.sqr(); // set min1sq before loop
                                     ++it2;
                                     for (; it2 != verletList->getAdrPositions().end(); ++it2) {
@@ -1291,7 +1336,7 @@ namespace espressopp {
                                            Real3D driftforce(0.0, 0.0, 0.0);
                                            //Real3D driftforce = vp.position() - pa;                                                          // X SPLIT VS SPHERE CHANGE
                                            //real driftforce = vp.position()[0] - pa[0];                                                    // X SPLIT VS SPHERE CHANGE
-                                           verletList->getSystem()->bc->getMinimumImageVector(driftforce, vp.position(), pa);
+                                           verletList->getSystem()->bc->getMinimumImageVector(driftforce, (1.0/sqrt(ntrotter))*at.modepos(), pa);
                                            //real distsq1 = driftforce.sqr();//driftforce*driftforce; //driftforce.sqr();                     // X SPLIT VS SPHERE CHANGE
                                            real distsq1 = driftforce[0]*driftforce[0];                                                          // X SPLIT VS SPHERE CHANGE
                                            if (distsq1 < min1sq) {
@@ -1347,8 +1392,9 @@ namespace espressopp {
 
       if (f==2 || f==3){
         storage.updateGhosts();
+        recalc2();
       }
-      recalc2();
+      // recalc2();
 
       if (f==1){
         calcForcesF();

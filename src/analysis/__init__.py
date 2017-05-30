@@ -2,21 +2,21 @@
 #      Max Planck Institute for Polymer Research
 #  Copyright (C) 2008,2009,2010,2011
 #      Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-#  
+#
 #  This file is part of ESPResSo++.
-#  
+#
 #  ESPResSo++ is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
 #  the Free Software Foundation, either version 3 of the License, or
 #  (at your option) any later version.
-#  
+#
 #  ESPResSo++ is distributed in the hope that it will be useful,
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-#  
+#
 #  You should have received a copy of the GNU General Public License
-#  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 from espressopp.esutil import pmiimport
@@ -36,6 +36,9 @@ from espressopp.analysis.ConfigurationsExtAdress import *
 from espressopp.analysis.Velocities import *
 from espressopp.analysis.CenterOfMass import *
 from espressopp.analysis.NPart import *
+from espressopp.analysis.NPartSubregion import *
+from espressopp.analysis.SubregionTracking import *
+from espressopp.analysis.ParticleDistribution import *
 from espressopp.analysis.MaxPID import *
 from espressopp.analysis.AllParticlePos import *
 from espressopp.analysis.IntraChainDistSq import *
@@ -55,6 +58,7 @@ from espressopp.analysis.Autocorrelation import *
 from espressopp.analysis.RadialDistrF import *
 from espressopp.analysis.StaticStructF import *
 from espressopp.analysis.RDFatomistic import *
+from espressopp.analysis.RDFpathintegral import *
 from espressopp.analysis.Energy import *
 from espressopp.analysis.Viscosity import *
 from espressopp.analysis.XDensity import *

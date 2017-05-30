@@ -196,7 +196,7 @@ namespace espressopp {
 
         shared_ptr< esutil::RNG > rng;
 
-        void integrateV1(int t);
+        void integrateV1(int t, bool doubletime);
         void integrateV2();
         void integrateModePos();
         void OUintegrate();

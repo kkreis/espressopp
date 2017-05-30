@@ -179,7 +179,7 @@ namespace espressopp {
                     it != adrZone.end(); ++it) {
                   	Particle &p = **it;
                   	// intitialize energy diff AA-CG
-                      if (p.lambda()<0.9999999 && p.lambda()>0.0000001){ energydiff[&p]=0.0; }
+                      if (p.lambda()<1.0 && p.lambda()>0.0){ energydiff[&p]=0.0; }
                   	// energydiff[&p]=0.0;
       }
 
@@ -430,7 +430,7 @@ namespace espressopp {
           real w = vp.lambda();
 
           //if(w!=1.0 && w!=0.0){   //   only chose those in the hybrid region
-          if(w<0.9999999 && w>0.0000001){   //   only chose those in the hybrid region
+          if(w<1.0 && w>0.0){   //   only chose those in the hybrid region
               // calculate distance to nearest adress particle or center
               std::vector<Real3D*>::iterator it2 = verletList->getAdrPositions().begin();
               Real3D pa = **it2; // position of adress particle
