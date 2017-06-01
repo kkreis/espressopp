@@ -36,6 +36,7 @@
 #include "FixedTupleListAdress.hpp"
 #include "esutil/Array2D.hpp"
 #include "SystemAccess.hpp"
+#include <boost/unordered_map.hpp>
 
 namespace espressopp {
   namespace interaction {
@@ -122,7 +123,7 @@ namespace espressopp {
       real dex;
       real dhy;
       real dex2; // dex^2
-      std::map<Particle*, real> energydiff;  // Energydifference V_AA - V_CG map for particles in hybrid region for drift term calculation in H-AdResS
+      boost::unordered_map<Particle*, real> energydiff;  // Energydifference V_AA - V_CG map for particles in hybrid region for drift term calculation in H-AdResS
       std::set<Particle*> adrZone;  // Virtual particles in AdResS zone (HY and AT region)
       std::set<Particle*> cgZone;
 
@@ -143,7 +144,8 @@ namespace espressopp {
                     it != adrZone.end(); ++it) {
                   	Particle &p = **it;
                   	// intitialize energy diff AA-CG
-                  	energydiff[&p]=0.0;
+                      if (p.lambda()<0.9999999 && p.lambda()>0.0000001){ energydiff[&p]=0.0; }
+                  	// energydiff[&p]=0.0;
       }
 
 
@@ -241,13 +243,15 @@ namespace espressopp {
 
               if(verletList->getAdrRegionType()){
                 mindriftforce = (1.0/min1sq)*mindriftforce; // normalized driftforce vector
-                mindriftforce *= (0.5 * energydiff.find(&vp)->second); // get the energy differences which were calculated previously and put in drift force
+                // mindriftforce *= (0.5 * energydiff.find(&vp)->second); // get the energy differences which were calculated previously and put in drift force
+                mindriftforce *= (0.5 * energydiff[&vp]);
                 mindriftforce *= vp.lambdaDeriv();
                 vp.force() += mindriftforce;
               }
               else{
                 real mindriftforceX = (1.0/min1sq)*mindriftforce[0]; // normalized driftforce vector
-                mindriftforceX *= (0.5 * energydiff.find(&vp)->second); // get the energy differences which were calculated previously and put in drift force
+                // mindriftforceX *= (0.5 * energydiff.find(&vp)->second); // get the energy differences which were calculated previously and put in drift force
+                mindriftforceX *= (0.5 * energydiff[&vp]);
                 mindriftforceX *= vp.lambdaDeriv();
                 Real3D driftforceadd(mindriftforceX,0.0,0.0);
                 vp.force() += driftforceadd;
@@ -257,7 +261,7 @@ namespace espressopp {
 
       }
 
-      energydiff.clear();  // clear the energy difference map
+      // energydiff.clear();  // clear the energy difference map
     }
 
     // Energy calculation does currently only work if integrator.run( ) (also with 0) and decompose have been executed before. This is due to the initialization of the tuples.

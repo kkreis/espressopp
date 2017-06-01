@@ -221,11 +221,17 @@ from _espressopp import interaction_LennardJones, \
                       interaction_VerletListLennardJones, \
                       interaction_VerletListAdressLennardJones, \
                       interaction_VerletListAdressATLennardJones, \
+                      interaction_VerletListAdressATLenJonesReacFieldGen, \
+                      interaction_VerletListAdressATLJReacFieldGenTab, \
+                      interaction_VerletListAdressATLJReacFieldGenHarmonic, \
                       interaction_VerletListAdressCGLennardJones, \
                       interaction_VerletListAdressLennardJones2, \
                       interaction_VerletListAdressLennardJonesHarmonic, \
                       interaction_VerletListHadressLennardJones, \
                       interaction_VerletListHadressATLennardJones, \
+                      interaction_VerletListHadressATLenJonesReacFieldGen, \
+                      interaction_VerletListHadressATLJReacFieldGenTab, \
+                      interaction_VerletListHadressATLJReacFieldGenHarmonic, \
                       interaction_VerletListHadressCGLennardJones, \
                       interaction_VerletListHadressLennardJones2, \
                       interaction_VerletListHadressLennardJonesHarmonic, \
@@ -281,6 +287,56 @@ class VerletListAdressATLennardJonesLocal(InteractionLocal, interaction_VerletLi
     def getVerletListLocal(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getVerletList(self)
+
+class VerletListAdressATLenJonesReacFieldGenLocal(InteractionLocal, interaction_VerletListAdressATLenJonesReacFieldGen):
+
+    def __init__(self, vl, fixedtupleList):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListAdressATLenJonesReacFieldGen, vl, fixedtupleList)
+
+    def setPotential1(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential1(self, type1, type2, potential)
+
+    def setPotential2(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential2(self, type1, type2, potential)
+
+class VerletListAdressATLJReacFieldGenTabLocal(InteractionLocal, interaction_VerletListAdressATLJReacFieldGenTab):
+
+    def __init__(self, vl, fixedtupleList):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListAdressATLJReacFieldGenTab, vl, fixedtupleList)
+
+    def setPotentialAT1(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT1(self, type1, type2, potential)
+
+    def setPotentialAT2(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT2(self, type1, type2, potential)
+
+    def setPotentialCG(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialCG(self, type1, type2, potential)
+
+class VerletListAdressATLJReacFieldGenHarmonicLocal(InteractionLocal, interaction_VerletListAdressATLJReacFieldGenHarmonic):
+
+    def __init__(self, vl, fixedtupleList):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListAdressATLJReacFieldGenHarmonic, vl, fixedtupleList)
+
+    def setPotentialAT1(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT1(self, type1, type2, potential)
+
+    def setPotentialAT2(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT2(self, type1, type2, potential)
+
+    def setPotentialCG(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialCG(self, type1, type2, potential)
 
 class VerletListAdressCGLennardJonesLocal(InteractionLocal, interaction_VerletListAdressCGLennardJones):
 
@@ -359,6 +415,56 @@ class VerletListHadressATLennardJonesLocal(InteractionLocal, interaction_VerletL
     def getVerletListLocal(self):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             return self.cxxclass.getVerletList(self)
+
+class VerletListHadressATLenJonesReacFieldGenLocal(InteractionLocal, interaction_VerletListHadressATLenJonesReacFieldGen):
+
+    def __init__(self, vl, fixedtupleList):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListHadressATLenJonesReacFieldGen, vl, fixedtupleList)
+
+    def setPotential1(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential1(self, type1, type2, potential)
+
+    def setPotential2(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential2(self, type1, type2, potential)
+
+class VerletListHadressATLJReacFieldGenTabLocal(InteractionLocal, interaction_VerletListHadressATLJReacFieldGenTab):
+
+    def __init__(self, vl, fixedtupleList):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListHadressATLJReacFieldGenTab, vl, fixedtupleList)
+
+    def setPotentialAT1(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT1(self, type1, type2, potential)
+
+    def setPotentialAT2(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT2(self, type1, type2, potential)
+
+    def setPotentialCG(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialCG(self, type1, type2, potential)
+
+class VerletListHadressATLJReacFieldGenHarmonicLocal(InteractionLocal, interaction_VerletListHadressATLJReacFieldGenHarmonic):
+
+    def __init__(self, vl, fixedtupleList):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListHadressATLJReacFieldGenHarmonic, vl, fixedtupleList)
+
+    def setPotentialAT1(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT1(self, type1, type2, potential)
+
+    def setPotentialAT2(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialAT2(self, type1, type2, potential)
+
+    def setPotentialCG(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotentialCG(self, type1, type2, potential)
 
 class VerletListHadressCGLennardJonesLocal(InteractionLocal, interaction_VerletListHadressCGLennardJones):
 
@@ -496,6 +602,27 @@ if pmi.isController:
             pmicall = ['setPotential', 'getPotential', 'getVerletList']
             )
 
+    class VerletListAdressATLenJonesReacFieldGen(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListAdressATLenJonesReacFieldGenLocal',
+            pmicall = ['setPotential1', 'setPotential2']
+            )
+
+    class VerletListAdressATLJReacFieldGenTab(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListAdressATLJReacFieldGenTabLocal',
+            pmicall = ['setPotentialAT1', 'setPotentialAT2', 'setPotentialCG']
+            )
+
+    class VerletListAdressATLJReacFieldGenHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListAdressATLJReacFieldGenHarmonicLocal',
+            pmicall = ['setPotentialAT1', 'setPotentialAT2', 'setPotentialCG']
+            )
+
     class VerletListAdressCGLennardJones(Interaction):
         __metaclass__ = pmi.Proxy
         pmiproxydefs = dict(
@@ -529,6 +656,27 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListHadressATLennardJonesLocal',
             pmicall = ['setPotential', 'getPotential', 'getVerletList']
+            )
+
+    class VerletListHadressATLenJonesReacFieldGen(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListHadressATLenJonesReacFieldGenLocal',
+            pmicall = ['setPotential1', 'setPotential2']
+            )
+
+    class VerletListHadressATLJReacFieldGenTab(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListHadressATLJReacFieldGenTabLocal',
+            pmicall = ['setPotentialAT1', 'setPotentialAT2', 'setPotentialCG']
+            )
+
+    class VerletListHadressATLJReacFieldGenHarmonic(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListHadressATLJReacFieldGenHarmonicLocal',
+            pmicall = ['setPotentialAT1', 'setPotentialAT2', 'setPotentialCG']
             )
 
     class VerletListHadressCGLennardJones(Interaction):

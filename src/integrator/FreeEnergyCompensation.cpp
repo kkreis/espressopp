@@ -103,7 +103,15 @@ namespace espressopp {
           FixedTupleListAdress::iterator it2;
           for(CellListIterator cit(cells); !cit.isDone(); ++cit) {
 
-              Table table = forces.find(cit->getType())->second;
+              // Table table = forces.find(cit->getType())->second;
+
+              Table table;
+              if (forces.find(cit->getType())!=forces.end()) { //because there may be CG particles to which TD force is not applied
+                table = forces.find(cit->getType())->second; //TODO shouldn't do find twice
+              }
+
+              // First do the hybrid region check and then do table = forces.find(cit->getType())->second? The later seems more expensive and it also less restrictive...
+
               if (table) {
 
                   Particle &vp = *cit;
@@ -150,11 +158,11 @@ namespace espressopp {
                           }
                   }
               }
-              else{
-                  std::cout << "ERROR: Using FEC Extension without providing table." << std::endl;
-                  exit(1);
-                  return;
-              }
+              // else{
+              //     std::cout << "ERROR: Using FEC Extension without providing table." << std::endl;
+              //     exit(1);
+              //     return;
+              // }
 
           }
     }

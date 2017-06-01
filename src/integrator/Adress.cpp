@@ -110,7 +110,7 @@ namespace espressopp {
 
         // connection to after aftCalcSlow
         _aftCalcSlow = integrator->aftCalcSlow.connect(
-                boost::bind(&Adress::aftCalcF, this), boost::signals2::at_front);
+                boost::bind(&Adress::aftCalcF, this), boost::signals2::at_back);
 
         // connection to after recalc2()
         _recalc2 = integrator->recalc2.connect(

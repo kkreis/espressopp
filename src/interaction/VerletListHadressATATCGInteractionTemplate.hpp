@@ -21,8 +21,8 @@
 */
 
 // ESPP_CLASS
-#ifndef _INTERACTION_VERLETLISTHADRESSATINTERACTIONTEMPLATE_HPP
-#define _INTERACTION_VERLETLISTHADRESSATINTERACTIONTEMPLATE_HPP
+#ifndef _INTERACTION_VERLETLISTHADRESSATATCGINTERACTIONTEMPLATE_HPP
+#define _INTERACTION_VERLETLISTHADRESSATATCGINTERACTIONTEMPLATE_HPP
 
 #include "System.hpp"
 #include "bc/BC.hpp"
@@ -40,18 +40,22 @@
 
 namespace espressopp {
   namespace interaction {
-    template < typename _Potential >
-    class VerletListHadressATInteractionTemplate: public Interaction {
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG >
+    class VerletListHadressATATCGInteractionTemplate: public Interaction {
 
     protected:
-      typedef _Potential Potential;
+      typedef _PotentialAT1 PotentialAT1;
+      typedef _PotentialAT2 PotentialAT2;
+      typedef _PotentialCG PotentialCG;
 
     public:
-      VerletListHadressATInteractionTemplate
+      VerletListHadressATATCGInteractionTemplate
       (shared_ptr<VerletListAdress> _verletList, shared_ptr<FixedTupleListAdress> _fixedtupleList)
                 : verletList(_verletList), fixedtupleList(_fixedtupleList) {
 
-          potentialArray = esutil::Array2D<Potential, esutil::enlarge>(0, 0, Potential());
+          potentialArrayAT1 = esutil::Array2D<PotentialAT1, esutil::enlarge>(0, 0, PotentialAT1());
+          potentialArrayAT2 = esutil::Array2D<PotentialAT2, esutil::enlarge>(0, 0, PotentialAT2());
+          potentialArrayCG = esutil::Array2D<PotentialCG, esutil::enlarge>(0, 0, PotentialCG());
 
           // AdResS stuff
           dhy = verletList->getHy();
@@ -79,22 +83,48 @@ namespace espressopp {
       }
 
       void
-      setPotential(int type1, int type2, const Potential &potential) {
+      setPotentialAT1(int type1, int type2, const PotentialAT1 &potential) {
           // typeX+1 because i<ntypes
           ntypes = std::max(ntypes, std::max(type1+1, type2+1));
 
-          potentialArray.at(type1, type2) = potential;
+          potentialArrayAT1.at(type1, type2) = potential;
           if (type1 != type2) { // add potential in the other direction
-             potentialArray.at(type2, type1) = potential;
+             potentialArrayAT1.at(type2, type1) = potential;
           }
       }
 
-      Potential &getPotential(int type1, int type2) {
-        return potentialArray.at(type1, type2);
+      void
+      setPotentialAT2(int type1, int type2, const PotentialAT2 &potential) {
+          // typeX+1 because i<ntypes
+          ntypes = std::max(ntypes, std::max(type1+1, type2+1));
+
+          potentialArrayAT2.at(type1, type2) = potential;
+          if (type1 != type2) { // add potential in the other direction
+             potentialArrayAT2.at(type2, type1) = potential;
+          }
       }
 
-      shared_ptr<Potential> getPotentialPtr(int type1, int type2) {
-        return  make_shared<Potential>(potentialArray.at(type1, type2));
+      void
+      setPotentialCG(int type1, int type2, const PotentialCG &potential) {
+          // typeX+1 because i<ntypes
+          ntypes = std::max(ntypes, std::max(type1+1, type2+1));
+
+         potentialArrayCG.at(type1, type2) = potential;
+         if (type1 != type2) { // add potential in the other direction
+             potentialArrayCG.at(type2, type1) = potential;
+         }
+      }
+
+      PotentialAT1 &getPotentialAT1(int type1, int type2) {
+        return potentialArrayAT1.at(type1, type2);
+      }
+
+      PotentialAT2 &getPotentialAT2(int type1, int type2) {
+        return potentialArrayAT2.at(type1, type2);
+      }
+
+      PotentialCG &getPotentialCG(int type1, int type2) {
+        return potentialArrayCG.at(type1, type2);
       }
 
       virtual void addForces();
@@ -114,7 +144,9 @@ namespace espressopp {
       int ntypes;
       shared_ptr<VerletListAdress> verletList;
       shared_ptr<FixedTupleListAdress> fixedtupleList;
-      esutil::Array2D<Potential, esutil::enlarge> potentialArray;
+      esutil::Array2D<PotentialAT1, esutil::enlarge> potentialArrayAT1;
+      esutil::Array2D<PotentialAT2, esutil::enlarge> potentialArrayAT2;
+      esutil::Array2D<PotentialCG, esutil::enlarge> potentialArrayCG;
 
       // AdResS stuff
       real pidhy2; // pi / (dhy * 2)
@@ -132,8 +164,8 @@ namespace espressopp {
     //////////////////////////////////////////////////
     // INLINE IMPLEMENTATION
     //////////////////////////////////////////////////
-    template < typename _Potential > inline void
-    VerletListHadressATInteractionTemplate < _Potential >::
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG > inline void
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
     addForces() {
       LOG4ESPP_INFO(theLogger, "add forces computed by the Verlet List");
 
@@ -148,7 +180,27 @@ namespace espressopp {
                   	// energydiff[&p]=0.0;
       }
 
-      // We only compute the atomistic contribution of all forces in this template. Hence, we do not loop over the pairs in the CG region.
+
+      // Pairs not inside the AdResS Zone (CG region)
+      // COMMENT FOR IDEAL GAS
+      for (PairList::Iterator it(verletList->getPairs()); it.isValid(); ++it) {
+
+        Particle &p1 = *it->first;
+        Particle &p2 = *it->second;
+        int type1 = p1.type();
+        int type2 = p2.type();
+
+        const PotentialCG &potentialCG = getPotentialCG(type1, type2);
+
+        Real3D force(0.0, 0.0, 0.0);
+
+        // CG forces
+        if(potentialCG._computeForce(force, p1, p2)) {
+          p1.force() += force;
+          p2.force() -= force;
+        }
+      }
+      // REMOVE FOR IDEAL GAS
 
       // Compute forces (AT and VP) of Pairs inside AdResS zone
       for (PairList::Iterator it(verletList->getAdrPairs()); it.isValid(); ++it) {
@@ -159,7 +211,38 @@ namespace espressopp {
 
          w1 = p1.lambda();
          w2 = p2.lambda();
+
          real w12 = (w1 + w2)/2.0;  // H-AdResS
+
+
+
+         // REMOVE FOR IDEAL GAS
+         // force between VP particles
+         int type1 = p1.type();
+         int type2 = p2.type();
+         const PotentialCG &potentialCG = getPotentialCG(type1, type2);
+         Real3D forcevp(0.0, 0.0, 0.0);
+                if (w12 != 1.0) { // calculate VP force if both VP are outside AT region (CG-HY, HY-HY)
+                    if (potentialCG._computeForce(forcevp, p1, p2)) {
+                        forcevp *= (1.0 - w12);
+                        p1.force() += forcevp;
+                        p2.force() -= forcevp;
+                    }
+
+                    // H-AdResS - Drift Term part 1
+                    // Compute CG energies of particles in the hybrid and store and add up in map energydiff
+                    if (w12 != 0.0) {   //at least one particle in hybrid region => need to do the energy calculation
+                        real energyvp = potentialCG._computeEnergy(p1, p2);
+                        if (w1 != 0.0) {   // if particle one is in hybrid region
+                            energydiff[&p1] += energyvp;   // add CG energy for virtual particle 1
+                        }
+                        if (w2 != 0.0) {   // if particle two is in hybrid region
+                            energydiff[&p2] += energyvp;   // add CG energy for virtual particle 2
+                        }
+                    }
+
+                }
+         // REMOVE FOR IDEAL GAS
 
          // force between AT particles
          if (w12 != 0.0) { // calculate AT force if both VP are outside CG region (HY-HY, HY-AT, AT-AT)
@@ -186,18 +269,34 @@ namespace espressopp {
                          Particle &p4 = **itv2;
 
                          // AT forces
-                         const Potential &potential = getPotential(p3.type(), p4.type());
                          Real3D force(0.0, 0.0, 0.0);
-                         if(potential._computeForce(force, p3, p4)) {
+                         const PotentialAT1 &potentialAT1 = getPotentialAT1(p3.type(), p4.type());
+                         if(potentialAT1._computeForce(force, p3, p4)) {
                              force *= w12;
                              p3.force() += force;
                              p4.force() -= force;
                          }
-
                          // H-AdResS - Drift Term part 2
                          // Compute AT energies of particles in the hybrid and store and subtract in map energydiff
                          if(w12!=1.0){   //at least one particle in hybrid region => need to do the energy calculation
-                             real energyat = potential._computeEnergy(p3, p4);
+                             const real energyat = potentialAT1._computeEnergy(p3, p4);
+                             if(w1!=1.0){   // if particle one is in hybrid region
+                                    energydiff[&p1] -= energyat;   // subtract AT energy for virtual particle 1
+                             }
+                             if(w2!=1.0){   // if particle two is in hybrid region
+                                    energydiff[&p2] -= energyat;   // subtract AT energy for virtual particle 2
+                             }
+                         }
+                         const PotentialAT2 &potentialAT2 = getPotentialAT2(p3.type(), p4.type());
+                         if(potentialAT2._computeForce(force, p3, p4)) {
+                             force *= w12;
+                             p3.force() += force;
+                             p4.force() -= force;
+                         }
+                         // H-AdResS - Drift Term part 2
+                         // Compute AT energies of particles in the hybrid and store and subtract in map energydiff
+                         if(w12!=1.0){   //at least one particle in hybrid region => need to do the energy calculation
+                             const real energyat = potentialAT2._computeEnergy(p3, p4);
                              if(w1!=1.0){   // if particle one is in hybrid region
                                     energydiff[&p1] -= energyat;   // subtract AT energy for virtual particle 1
                              }
@@ -283,13 +382,25 @@ namespace espressopp {
     }
 
     // Energy calculation does currently only work if integrator.run( ) (also with 0) and decompose have been executed before. This is due to the initialization of the tuples.
-    template < typename _Potential >
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG >
     inline real
-    VerletListHadressATInteractionTemplate < _Potential >::
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
     computeEnergy() {
       LOG4ESPP_INFO(theLogger, "compute energy of the Verlet list pairs");
 
+      // REMOVE FOR IDEAL GAS
       real e = 0.0;
+      for (PairList::Iterator it(verletList->getPairs());
+           it.isValid(); ++it) {
+          Particle &p1 = *it->first;
+          Particle &p2 = *it->second;
+          int type1 = p1.type();
+          int type2 = p2.type();
+          const PotentialCG &potential = getPotentialCG(type1, type2);
+          e += potential._computeEnergy(p1, p2);
+      }
+      // REMOVE FOR IDEAL GAS
+
       for (PairList::Iterator it(verletList->getAdrPairs());
            it.isValid(); ++it) {
           Particle &p1 = *it->first;
@@ -297,6 +408,13 @@ namespace espressopp {
           real w1 = p1.lambda();
           real w2 = p2.lambda();
           real w12 = (w1 + w2)/2.0;
+
+          // REMOVE FOR IDEAL GAS
+          int type1 = p1.type();
+          int type2 = p2.type();
+          const PotentialCG &potentialCG = getPotentialCG(type1, type2);
+          e += (1.0-w12)*potentialCG._computeEnergy(p1, p2);
+          // REMOVE FOR IDEAL GAS
 
           FixedTupleListAdress::iterator it3;
           FixedTupleListAdress::iterator it4;
@@ -318,8 +436,9 @@ namespace espressopp {
                       Particle &p4 = **itv2;
 
                       // AT energies
-                      const Potential &potential = getPotential(p3.type(), p4.type());
-                      e += w12*potential._computeEnergy(p3, p4);
+                      const PotentialAT1 &potentialAT1 = getPotentialAT1(p3.type(), p4.type());
+                      const PotentialAT2 &potentialAT2 = getPotentialAT2(p3.type(), p4.type());
+                      e += w12*(potentialAT1._computeEnergy(p3, p4) + potentialAT2._computeEnergy(p3, p4));
 
                   }
               }
@@ -331,70 +450,73 @@ namespace espressopp {
       return esum;
     }
 
-    template < typename _Potential >
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG >
     inline real
-    VerletListHadressATInteractionTemplate < _Potential >::
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
     computeEnergyDeriv() {
-      std::cout << "Warning! At the moment computeEnergyDeriv in VerletListHadressATInteractionTemplate does not work." << std::endl;
+      std::cout << "Warning! At the moment computeEnergyDeriv in VerletListHadressATATCGInteractionTemplate does not work." << std::endl;
       return 0.0;
     }
 
-    template < typename _Potential > inline real
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeEnergyAA() {
-      std::cout << "Warning! At the moment computeEnergyAA in VerletListHadressATInteractionTemplate does not work." << std::endl;
-      return 0.0;
-    }
-
-    template < typename _Potential > inline real
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeEnergyCG() {
-      std::cout << "Warning! At the moment computeEnergyCG in VerletListHadressATInteractionTemplate does not work." << std::endl;
-      return 0.0;
-    }
-
-    template < typename _Potential > inline void
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeVirialX(std::vector<real> &p_xx_total, int bins) {
-      std::cout << "Warning! At the moment computeVirialX in VerletListHadressATInteractionTemplate does'n work"<<std::endl;
-    }
-
-    template < typename _Potential > inline real
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeVirial() {
-      LOG4ESPP_INFO(theLogger, "compute the virial for the Verlet List");
-      std::cout << "Warning! At the moment computeVirial in VerletListHadressATInteractionTemplate does not work." << std::endl;
-      return 0.0;
-    }
-
-    template < typename _Potential > inline void
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeVirialTensor(Tensor& w) {
-      LOG4ESPP_INFO(theLogger, "compute the virial tensor for the Verlet List");
-      std::cout << "Warning! At the moment computeVirialTensor in VerletListHadressATInteractionTemplate does'n work"<<std::endl;
-    }
-
-    template < typename _Potential > inline void
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeVirialTensor(Tensor& w, real z) {
-      LOG4ESPP_INFO(theLogger, "compute the virial tensor for the Verlet List");
-      std::cout << "Warning! At the moment computeVirialTensor in VerletListHadressATInteractionTemplate does'n work"<<std::endl;
-    }
-
-    template < typename _Potential > inline void
-    VerletListHadressATInteractionTemplate < _Potential >::
-    computeVirialTensor(Tensor *w, int n) {
-      std::cout << "Warning! At the moment computeVirialTensor in VerletListHadressATInteractionTemplate does'n work"<<std::endl;
-    }
-
-    template < typename _Potential >
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG >
     inline real
-    VerletListHadressATInteractionTemplate< _Potential >::
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeEnergyAA() {
+      std::cout << "Warning! At the moment computeEnergyAA in VerletListHadressATATCGInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG >
+    inline real
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeEnergyCG() {
+      std::cout << "Warning! At the moment computeEnergyCG in VerletListHadressATATCGInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG > inline void
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeVirialX(std::vector<real> &p_xx_total, int bins) {
+      std::cout << "Warning! At the moment computeVirialX in VerletListHadressATATCGInteractionTemplate does not work"<<std::endl;
+    }
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG > inline real
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeVirial() {
+      std::cout << "Warning! At the moment computeVirial in VerletListHadressATATCGInteractionTemplate does not work." << std::endl;
+      return 0.0;
+    }
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG > inline void
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeVirialTensor(Tensor& w) {
+      std::cout << "Warning! At the moment computeVirialTensor in VerletListHadressATATCGInteractionTemplate does not work"<<std::endl;
+    }
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG > inline void
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeVirialTensor(Tensor& w, real z) {
+      std::cout << "Warning! At the moment computeVirialTensor in VerletListHadressATATCGInteractionTemplate does not work"<<std::endl;
+    }
+
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG > inline void
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
+    computeVirialTensor(Tensor *w, int n) {
+      std::cout << "Warning! At the moment computeVirialTensor in VerletListHadressATATCGInteractionTemplate does not work"<<std::endl;
+    }
+
+    template < typename _PotentialAT1, typename _PotentialAT2, typename _PotentialCG >
+    inline real
+    VerletListHadressATATCGInteractionTemplate < _PotentialAT1, _PotentialAT2, _PotentialCG >::
     getMaxCutoff() {
       real cutoff = 0.0;
       for (int i = 0; i < ntypes; i++) {
         for (int j = 0; j < ntypes; j++) {
-          cutoff = std::max(cutoff, getPotential(i, j).getCutoff());
+          cutoff = std::max(cutoff, getPotentialCG(i, j).getCutoff());
+          cutoff = std::max(cutoff, getPotentialAT1(i, j).getCutoff());
+          cutoff = std::max(cutoff, getPotentialAT2(i, j).getCutoff());
         }
       }
       return cutoff;

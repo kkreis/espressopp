@@ -67,7 +67,7 @@ namespace espressopp {
     void TDforce::connect(){
       if(slow){
         _applyForce = integrator->aftCalcSlow.connect(
-            boost::bind(&TDforce::applyForce, this));
+            boost::bind(&TDforce::applyForce, this), boost::signals2::at_front);
       }
       else{
         _applyForce = integrator->aftCalcF.connect(
@@ -234,10 +234,15 @@ namespace espressopp {
                        }
                     } else {
                        // use this if you need 1-dir force only!
-                       real d1 = cit->getPos()[0] - center[0];
-                       real d1abs = fabs(d1);
+                       Real3D dist3D;
+                       bc.getMinimumImageVectorBox(dist3D,cit->getPos(),center); //pos - center
+                       real d1abs = fabs(dist3D[0]);
+                       //real d1 = cit->getPos()[0] - center[0];
+                       //real d1 = cit->getPos()[0] - center[0];
+                       //real d1abs = fabs(d1);
                        real force = table->getForce(d1abs);
-                       if (d1>0.0) {
+                       //if (d1>0.0) {
+                       if (dist3D[0]>0.0) {
                          cit->force()[0] += force;
                        } else {
                          cit->force()[0] -= force;

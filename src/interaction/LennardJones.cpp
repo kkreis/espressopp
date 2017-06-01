@@ -24,13 +24,18 @@
 #include "LennardJones.hpp"
 #include "Tabulated.hpp"
 #include "Harmonic.hpp"
+#include "ReactionFieldGeneralized.hpp"
 #include "VerletListInteractionTemplate.hpp"
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListAdressATInteractionTemplate.hpp"
 #include "VerletListAdressCGInteractionTemplate.hpp"
+#include "VerletListAdressATATInteractionTemplate.hpp"
+#include "VerletListAdressATATCGInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
 #include "VerletListHadressATInteractionTemplate.hpp"
 #include "VerletListHadressCGInteractionTemplate.hpp"
+#include "VerletListHadressATATInteractionTemplate.hpp"
+#include "VerletListHadressATATCGInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListTypesInteractionTemplate.hpp"
@@ -44,16 +49,28 @@ namespace espressopp {
         VerletListAdressLennardJones;
     typedef class VerletListAdressATInteractionTemplate <LennardJones>
         VerletListAdressATLennardJones;
+    typedef class VerletListAdressATATInteractionTemplate <LennardJones, ReactionFieldGeneralized>
+        VerletListAdressATLenJonesReacFieldGen;
+    typedef class VerletListAdressATATCGInteractionTemplate <LennardJones, ReactionFieldGeneralized, Tabulated>
+        VerletListAdressATLJReacFieldGenTab;
+    typedef class VerletListAdressATATCGInteractionTemplate <LennardJones, ReactionFieldGeneralized, Harmonic>
+        VerletListAdressATLJReacFieldGenHarmonic;
     typedef class VerletListAdressCGInteractionTemplate <LennardJones>
         VerletListAdressCGLennardJones;
     typedef class VerletListAdressInteractionTemplate <LennardJones, LennardJones>
         VerletListAdressLennardJones2;
-        typedef class VerletListAdressInteractionTemplate <LennardJones, Harmonic>
+    typedef class VerletListAdressInteractionTemplate <LennardJones, Harmonic>
         VerletListAdressLennardJonesHarmonic;
     typedef class VerletListHadressInteractionTemplate <LennardJones, Tabulated>
         VerletListHadressLennardJones;
     typedef class VerletListHadressATInteractionTemplate <LennardJones>
         VerletListHadressATLennardJones;
+    typedef class VerletListHadressATATInteractionTemplate <LennardJones, ReactionFieldGeneralized>
+        VerletListHadressATLenJonesReacFieldGen;
+    typedef class VerletListHadressATATCGInteractionTemplate <LennardJones, ReactionFieldGeneralized, Tabulated>
+        VerletListHadressATLJReacFieldGenTab;
+    typedef class VerletListHadressATATCGInteractionTemplate <LennardJones, ReactionFieldGeneralized, Harmonic>
+        VerletListHadressATLJReacFieldGenHarmonic;
     typedef class VerletListHadressCGInteractionTemplate <LennardJones>
         VerletListHadressCGLennardJones;
     typedef class VerletListHadressInteractionTemplate <LennardJones, LennardJones>
@@ -101,6 +118,32 @@ namespace espressopp {
         .def("getPotential", &VerletListAdressATLennardJones::getPotentialPtr)
       ;
 
+      class_< VerletListAdressATLenJonesReacFieldGen, bases< Interaction > >
+        ("interaction_VerletListAdressATLenJonesReacFieldGen",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotential1", &VerletListAdressATLenJonesReacFieldGen::setPotential1)
+        .def("setPotential2", &VerletListAdressATLenJonesReacFieldGen::setPotential2);
+      ;
+
+      class_< VerletListAdressATLJReacFieldGenTab, bases< Interaction > >
+        ("interaction_VerletListAdressATLJReacFieldGenTab",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotentialAT1", &VerletListAdressATLJReacFieldGenTab::setPotentialAT1)
+        .def("setPotentialAT2", &VerletListAdressATLJReacFieldGenTab::setPotentialAT2)
+        .def("setPotentialCG", &VerletListAdressATLJReacFieldGenTab::setPotentialCG);
+      ;
+
+      class_< VerletListAdressATLJReacFieldGenHarmonic, bases< Interaction > >
+        ("interaction_VerletListAdressATLJReacFieldGenHarmonic",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotentialAT1", &VerletListAdressATLJReacFieldGenHarmonic::setPotentialAT1)
+        .def("setPotentialAT2", &VerletListAdressATLJReacFieldGenHarmonic::setPotentialAT2)
+        .def("setPotentialCG", &VerletListAdressATLJReacFieldGenHarmonic::setPotentialCG);
+      ;
+
       class_< VerletListAdressCGLennardJones, bases< Interaction > >
         ("interaction_VerletListAdressCGLennardJones",
            init< shared_ptr<VerletListAdress>,
@@ -141,6 +184,32 @@ namespace espressopp {
         .def("getVerletList", &VerletListHadressATLennardJones::getVerletList)
         .def("setPotential", &VerletListHadressATLennardJones::setPotential)
         .def("getPotential", &VerletListHadressATLennardJones::getPotentialPtr)
+      ;
+
+      class_< VerletListHadressATLenJonesReacFieldGen, bases< Interaction > >
+        ("interaction_VerletListHadressATLenJonesReacFieldGen",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotential1", &VerletListHadressATLenJonesReacFieldGen::setPotential1)
+        .def("setPotential2", &VerletListHadressATLenJonesReacFieldGen::setPotential2);
+      ;
+
+      class_< VerletListHadressATLJReacFieldGenTab, bases< Interaction > >
+        ("interaction_VerletListHadressATLJReacFieldGenTab",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotentialAT1", &VerletListHadressATLJReacFieldGenTab::setPotentialAT1)
+        .def("setPotentialAT2", &VerletListHadressATLJReacFieldGenTab::setPotentialAT2)
+        .def("setPotentialCG", &VerletListHadressATLJReacFieldGenTab::setPotentialCG);
+      ;
+
+      class_< VerletListHadressATLJReacFieldGenHarmonic, bases< Interaction > >
+        ("interaction_VerletListHadressATLJReacFieldGenHarmonic",
+           init< shared_ptr<VerletListAdress>,
+                  shared_ptr<FixedTupleListAdress> >())
+        .def("setPotentialAT1", &VerletListHadressATLJReacFieldGenHarmonic::setPotentialAT1)
+        .def("setPotentialAT2", &VerletListHadressATLJReacFieldGenHarmonic::setPotentialAT2)
+        .def("setPotentialCG", &VerletListHadressATLJReacFieldGenHarmonic::setPotentialCG);
       ;
 
       class_< VerletListHadressCGLennardJones, bases< Interaction > >
