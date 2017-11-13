@@ -26,7 +26,6 @@
 
 #include "types.hpp"
 #include "MDIntegrator.hpp"
-//#include "esutil/Timer.hpp"
 #include <boost/signals2.hpp>
 #include "VerletListAdress.hpp"
 
@@ -201,7 +200,7 @@ namespace espressopp {
         void integrateModePos();
         void OUintegrate();
 
-        void initForces();
+        void initForces(int f);
 
         void updateForces(int f);
 

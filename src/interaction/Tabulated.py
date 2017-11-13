@@ -38,6 +38,7 @@ from _espressopp import interaction_Tabulated, \
                       interaction_VerletListHadressTabulatedLJ, \
                       interaction_VerletListPIadressTabulated, \
                       interaction_VerletListPIadressTabulatedLJ, \
+                      interaction_VerletListPIadressNoDriftTabulated, \
                       interaction_CellListTabulated, \
                       interaction_FixedPairListTabulated, \
                       interaction_FixedPairListPIadressTabulated
@@ -119,6 +120,20 @@ class VerletListPIadressTabulatedLJLocal(InteractionLocal, interaction_VerletLis
     def setPotentialCL(self, type1, type2, potential):
         if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
             self.cxxclass.setPotentialCL(self, type1, type2, potential)
+
+class VerletListPIadressNoDriftTabulatedLocal(InteractionLocal, interaction_VerletListPIadressNoDriftTabulated):
+    'The (local) tabulated interaction using Verlet lists.'
+    def __init__(self, vl, fixedtupleList, ntrotter, speedup, CLonCentroidInHY = False):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            cxxinit(self, interaction_VerletListPIadressNoDriftTabulated, vl, fixedtupleList, ntrotter, speedup, CLonCentroidInHY)
+
+    def setPotential(self, type1, type2, potential):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            self.cxxclass.setPotential(self, type1, type2, potential)
+
+    def getPotential(self, type1, type2):
+        if not (pmi._PMIComm and pmi._PMIComm.isActive()) or pmi._MPIcomm.rank in pmi._PMIComm.getMPIcpugroup():
+            return self.cxxclass.getPotential(self, type1, type2)
 
 class VerletListTabulatedLocal(InteractionLocal, interaction_VerletListTabulated):
     'The (local) tabulated interaction using Verlet lists.'
@@ -207,6 +222,13 @@ if pmi.isController:
         pmiproxydefs = dict(
             cls =  'espressopp.interaction.VerletListPIadressTabulatedLJLocal',
             pmicall = ['setPotentialQM', 'setPotentialCL']
+            )
+
+    class VerletListPIadressNoDriftTabulated(Interaction):
+        __metaclass__ = pmi.Proxy
+        pmiproxydefs = dict(
+            cls =  'espressopp.interaction.VerletListPIadressNoDriftTabulatedLocal',
+            pmicall = ['setPotential','getPotential']
             )
 
     class VerletListTabulated(Interaction):

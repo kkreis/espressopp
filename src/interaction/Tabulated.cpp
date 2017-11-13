@@ -30,6 +30,7 @@
 #include "VerletListAdressInteractionTemplate.hpp"
 #include "VerletListHadressInteractionTemplate.hpp"
 #include "VerletListPIadressInteractionTemplate.hpp"
+#include "VerletListPIadressNoDriftInteractionTemplate.hpp"
 #include "CellListAllPairsInteractionTemplate.hpp"
 #include "FixedPairListInteractionTemplate.hpp"
 #include "FixedPairListPIadressInteractionTemplate.hpp"
@@ -64,6 +65,7 @@ namespace espressopp {
     typedef class VerletListHadressInteractionTemplate <Tabulated, LennardJones> VerletListHadressTabulatedLJ;
     typedef class VerletListPIadressInteractionTemplate <Tabulated, Tabulated> VerletListPIadressTabulated;
     typedef class VerletListPIadressInteractionTemplate <Tabulated, LennardJones> VerletListPIadressTabulatedLJ;
+    typedef class VerletListPIadressNoDriftInteractionTemplate <Tabulated> VerletListPIadressNoDriftTabulated;
     typedef class CellListAllPairsInteractionTemplate <Tabulated> CellListTabulated;
     typedef class FixedPairListInteractionTemplate <Tabulated> FixedPairListTabulated;
     typedef class FixedPairListPIadressInteractionTemplate <Tabulated> FixedPairListPIadressTabulated;
@@ -135,6 +137,17 @@ namespace espressopp {
                 )
             .def("setPotentialQM", &VerletListPIadressTabulatedLJ::setPotentialQM)
             .def("setPotentialCL", &VerletListPIadressTabulatedLJ::setPotentialCL);
+        ;
+
+      class_ <VerletListPIadressNoDriftTabulated, bases <Interaction> >
+        ("interaction_VerletListPIadressNoDriftTabulated",
+           init <shared_ptr<VerletListAdress>,
+                 shared_ptr<FixedTupleListAdress>,
+                 int,
+                 bool,
+         bool>()
+                )
+            .def("setPotential", &VerletListPIadressNoDriftTabulated::setPotential)
         ;
 
       class_ <CellListTabulated, bases <Interaction> >

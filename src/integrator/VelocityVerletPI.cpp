@@ -790,37 +790,39 @@ namespace espressopp {
                     	}
                     }
                     else if(at.pib() > 1 && at.pib() <= ntrotter){
-                        Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
-                        if(PILE == false){
-							if(constkinmass == false){
-								if(realkinmass == false){
-									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass()*Eigenvalues[at.pib()-1])) * ranval;
-								}
-								else{
-									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass())) * ranval;
-								}
-							}
-							else{
-								if(realkinmass == false){
-									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass()*Eigenvalues[at.pib()-1])) * ranval;
-								}
-								else{
-									at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass())) * ranval;
-								}
-							}
-                        }
-                        else{
-                        	// real modegamma = 2.0 * PILElambda * sqrt(omega2) * sqrt(Eigenvalues.at(at.pib()-1));
-                            real modegamma = 2.0 * PILElambda * sqrt(omega2 * ntrotter) * sqrt(Eigenvalues[at.pib()-1]);
-                        	real prefac1_PILE = exp(-modegamma*dt);
-                        	// real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ));
-                            real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ) / ntrotter );
-							if(constkinmass == false){
-								at.modemom() = prefac1_PILE * at.modemom() + (prefac2_PILE*sqrt(CMDparameter*vp.varmass())) * ranval;
-							}
-							else{
-								at.modemom() = prefac1_PILE * at.modemom() + (prefac2_PILE*sqrt(CMDparameter*vp.mass())) * ranval;
-							}
+                        if((speedup == false) || (vp.lambda() > 0.000000001)){
+                           Real3D ranval((*rng)() - 0.5, (*rng)() - 0.5, (*rng)() - 0.5);
+                           if(PILE == false){
+						if(constkinmass == false){
+					   		if(realkinmass == false){
+					       		at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass()*Eigenvalues[at.pib()-1])) * ranval;
+						      }
+						      else{
+							     at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.varmass())) * ranval;
+						      }
+					      }
+					      else{
+						      if(realkinmass == false){
+						      	at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass()*Eigenvalues[at.pib()-1])) * ranval;
+						      }
+						      else{
+						      	at.modemom() = prefac1 * at.modemom() + (prefac2*sqrt(CMDparameter*vp.mass())) * ranval;
+						      }
+					      }
+                          }
+                          else{
+                        	      // real modegamma = 2.0 * PILElambda * sqrt(omega2) * sqrt(Eigenvalues.at(at.pib()-1));
+                                  real modegamma = 2.0 * PILElambda * sqrt(omega2 * ntrotter) * sqrt(Eigenvalues[at.pib()-1]);
+                        	      real prefac1_PILE = exp(-modegamma*dt);
+                        	      // real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ));
+                                  real prefac2_PILE = sqrt(12.0*temperature*( 1.0-exp(-2.0*modegamma*dt) ) / ntrotter );
+					      	if(constkinmass == false){
+					      		at.modemom() = prefac1_PILE * at.modemom() + (prefac2_PILE*sqrt(CMDparameter*vp.varmass())) * ranval;
+					      	}
+					      	else{
+					      		at.modemom() = prefac1_PILE * at.modemom() + (prefac2_PILE*sqrt(CMDparameter*vp.mass())) * ranval;
+					      	}
+                          }
                         }
                     }
                     else{
@@ -1129,7 +1131,8 @@ namespace espressopp {
 
     void VelocityVerletPI::transForces(){
         System& system = getSystemRef();
-        CellList localCells = system.storage->getLocalCells(); //!!!!
+        // CellList localCells = system.storage->getLocalCells(); //!!!!
+        CellList localCells = system.storage->getRealCells(); //!!!!
         shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
 
         for(CellListIterator cit(localCells); !cit.isDone(); ++cit){
@@ -1383,10 +1386,10 @@ namespace espressopp {
 
     void VelocityVerletPI::updateForces(int f)
     {
-      initForces();
+      initForces(f);
 
       // signal
-      aftInitF();
+      // aftInitF();
 
       storage::Storage& storage = *getSystemRef().storage;
 
@@ -1422,17 +1425,82 @@ namespace espressopp {
       }
     }
 
-    void VelocityVerletPI::initForces()
+    void VelocityVerletPI::initForces(int f)
     {
       System& system = getSystemRef();
-      CellList localCells = system.storage->getLocalCells();
 
-      LOG4ESPP_INFO(theLogger, "init forces for real + ghost particles");
+      if (f==1){
+        CellList localCells = system.storage->getLocalCells();
 
-      for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
-        cit->force() = 0.0;
-        cit->forcem() = 0.0;
-        cit->drift() = 0.0;   // Can in principle be commented, when drift is not used.
+        LOG4ESPP_INFO(theLogger, "init forces for real + ghost particles");
+
+        // for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
+        //   cit->force() = 0.0;
+        //   cit->forcem() = 0.0;
+        //   // cit->drift() = 0.0;   // Can in principle be commented, when drift is not used.
+        // }
+
+        // AT reals
+        ParticleList& adrATparticles = system.storage->getAdrATParticles();
+        for (std::vector<Particle>::iterator it = adrATparticles.begin();
+                it != adrATparticles.end(); ++it) {
+            // it->force() = 0.0;
+            it->forcem() = 0.0;
+            // it->drift() = 0.0;
+        }
+
+        // // AT ghosts
+        // typedef std::list<ParticleList> ParticleListAdr;
+        // ParticleListAdr& adrATparticlesG = system.storage->getAdrATParticlesG();
+        // for (ParticleListAdr::iterator it = adrATparticlesG.begin();
+        //         it != adrATparticlesG.end(); ++it) {
+
+        //     for (ParticleList::iterator it2 = it->begin();
+        //             it2 != it->end(); ++it2) {
+        //         it2->force() = 0.0;
+        //         it2->forcem() = 0.0;
+        //         // it2->drift() = 0.0;
+        //     }
+        // }
+      }
+      else if (f==2 || f==3){
+        CellList localCells = system.storage->getLocalCells();
+
+        LOG4ESPP_INFO(theLogger, "init forces for real + ghost particles");
+
+        for(CellListIterator cit(localCells); !cit.isDone(); ++cit) {
+          cit->force() = 0.0;
+          cit->forcem() = 0.0;
+          // cit->drift() = 0.0;   // Can in principle be commented, when drift is not used.
+        }
+
+        // AT reals
+        ParticleList& adrATparticles = system.storage->getAdrATParticles();
+        for (std::vector<Particle>::iterator it = adrATparticles.begin();
+                it != adrATparticles.end(); ++it) {
+            it->force() = 0.0;
+            it->forcem() = 0.0;
+            // it->drift() = 0.0;
+        }
+
+        // AT ghosts
+        typedef std::list<ParticleList> ParticleListAdr;
+        ParticleListAdr& adrATparticlesG = system.storage->getAdrATParticlesG();
+        for (ParticleListAdr::iterator it = adrATparticlesG.begin();
+                it != adrATparticlesG.end(); ++it) {
+
+            for (ParticleList::iterator it2 = it->begin();
+                    it2 != it->end(); ++it2) {
+                it2->force() = 0.0;
+                it2->forcem() = 0.0;
+                // it2->drift() = 0.0;
+            }
+        }
+      }
+      else{
+        std::cout << "initForces routine in VelocityVerletPI integrator received wrong integer.\n";
+        exit(1);
+        return;
       }
     }
 

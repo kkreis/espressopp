@@ -64,7 +64,7 @@ namespace espressopp {
 
     void AdressPI::disconnect(){
         _SetPosVel.disconnect();
-        _initForces.disconnect();
+        // _initForces.disconnect();
         _setweights.disconnect();
         _aftCalcF.disconnect();
     }
@@ -75,9 +75,9 @@ namespace espressopp {
         _SetPosVel = integrator->runInit.connect(
                 boost::bind(&AdressPI::SetPosVel, this), boost::signals2::at_front);
 
-        // connection to after initForces()
-        _initForces = integrator->aftInitF.connect(
-                boost::bind(&AdressPI::initForces, this), boost::signals2::at_front);
+        // // connection to after initForces()
+        // _initForces = integrator->aftInitF.connect(
+        //         boost::bind(&AdressPI::initForces, this), boost::signals2::at_front);
 
         // connection to inside of integrate1()
         _setweights = integrator->recalc2.connect(
@@ -185,33 +185,33 @@ namespace espressopp {
     }
 
 
-    void AdressPI::initForces(){
+    // void AdressPI::initForces(){
 
-        System& system = getSystemRef();
+    //     System& system = getSystemRef();
 
-        // AT reals
-        ParticleList& adrATparticles = system.storage->getAdrATParticles();
-        for (std::vector<Particle>::iterator it = adrATparticles.begin();
-                it != adrATparticles.end(); ++it) {
-            it->force() = 0.0;
-            it->forcem() = 0.0;
-            it->drift() = 0.0;
-        }
+    //     // AT reals
+    //     ParticleList& adrATparticles = system.storage->getAdrATParticles();
+    //     for (std::vector<Particle>::iterator it = adrATparticles.begin();
+    //             it != adrATparticles.end(); ++it) {
+    //         it->force() = 0.0;
+    //         it->forcem() = 0.0;
+    //         // it->drift() = 0.0;
+    //     }
 
-        // AT ghosts
-        typedef std::list<ParticleList> ParticleListAdr;
-        ParticleListAdr& adrATparticlesG = system.storage->getAdrATParticlesG();
-        for (ParticleListAdr::iterator it = adrATparticlesG.begin();
-                it != adrATparticlesG.end(); ++it) {
+    //     // AT ghosts
+    //     typedef std::list<ParticleList> ParticleListAdr;
+    //     ParticleListAdr& adrATparticlesG = system.storage->getAdrATParticlesG();
+    //     for (ParticleListAdr::iterator it = adrATparticlesG.begin();
+    //             it != adrATparticlesG.end(); ++it) {
 
-            for (ParticleList::iterator it2 = it->begin();
-                    it2 != it->end(); ++it2) {
-                it2->force() = 0.0;
-                it2->forcem() = 0.0;
-                it2->drift() = 0.0;
-            }
-        }
-    }
+    //         for (ParticleList::iterator it2 = it->begin();
+    //                 it2 != it->end(); ++it2) {
+    //             it2->force() = 0.0;
+    //             it2->forcem() = 0.0;
+    //             // it2->drift() = 0.0;
+    //         }
+    //     }
+    // }
 
     void AdressPI::setweights(){
 
