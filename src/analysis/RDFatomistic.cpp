@@ -1,23 +1,23 @@
 /*
-  Copyright (C) 2012,2013
+  Copyright (C) 2012,2013,2014,2015,2016,2017,2018
       Max Planck Institute for Polymer Research
   Copyright (C) 2008,2009,2010,2011
       Max-Planck-Institute for Polymer Research & Fraunhofer SCAI
-  
+
   This file is part of ESPResSo++.
-  
+
   ESPResSo++ is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
-  
+
   ESPResSo++ is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
-  
+
   You should have received a copy of the GNU General Public License
-  along with this program.  If not, see <http://www.gnu.org/licenses/>. 
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "python.hpp"
@@ -40,7 +40,7 @@ using namespace std;
 
 namespace espressopp {
   namespace analysis {
-    
+
     // TODO currently works correctly for Lx = Ly = Lz
     // rdfN is a level of discretisation of rdf (how many elements it contains)
     python::list RDFatomistic::computeArray(int rdfN) const {
@@ -49,21 +49,21 @@ namespace espressopp {
       esutil::Error err(system.comm);
       Real3D Li = system.bc->getBoxL();
       Real3D Li_half = Li / 2.;
-      
+
       int nprocs = system.comm->size();
       int myrank = system.comm->rank();
-      
+
       real histogram [rdfN];
       for(int i=0;i<rdfN;i++) histogram[i]=0;
-          
+
       real dr = Li_half[1] / (real)rdfN; // If you work with nonuniform Lx, Ly, Lz, you
-                                         // should use for Li_half[XXX] the shortest side length   
+                                         // should use for Li_half[XXX] the shortest side length
       /*struct data{
           Real3D pos;
           int type;
           int molecule;
       };*/
-      
+
       int num_part = 0;
       //ConfigurationPtr config = make_shared<Configuration> ();
       map< size_t, data > config;
@@ -74,7 +74,7 @@ namespace espressopp {
           shared_ptr<FixedTupleListAdress> fixedtupleList = system.storage->getFixedTuples();
           CellList realCells = system.storage->getRealCells();
           for(CellListIterator cit(realCells); !cit.isDone(); ++cit) {
-              
+
                 Particle &vp = *cit;
                 FixedTupleListAdress::iterator it2;
                 it2 = fixedtupleList->find(&vp);
@@ -89,7 +89,7 @@ namespace espressopp {
                           //conf[id] = at.position();
                           data tmp = { at.position(), at.type(), vp.id() };
                           conf[id] = tmp;
-                      }  
+                      }
                 }
 
                 else{   // If not, use CG particle itself for calculation.
@@ -98,7 +98,7 @@ namespace espressopp {
                       //int id = cit->id();
                       //conf[id] = cit->position();
                 }
-  
+
           }
     	}
 
@@ -115,25 +115,25 @@ namespace espressopp {
           num_part ++;
         }
       }
-      
+
       int num_pairs = 0;
       // now all CPUs have all particle coords and num_part is the total number of particles
-      
+
       // use all cpus
       // TODO it could be a problem if   n_nodes > num_part
       int numi = num_part / nprocs + 1;
       int mini = myrank * numi;
       int maxi = mini + numi;
-      
+
       if(maxi>num_part) maxi = num_part;
-      
+
       int perc=0, perc1=0;
       for(int i = mini; i<maxi; i++){
         //Real3D coordP1 = config->getCoordinates(i);
         Real3D coordP1 = config[i].pos;
         int typeP1 = config[i].type;
-        int molP1 = config[i].molecule; 
-        
+        int molP1 = config[i].molecule;
+
         if((coordP1[0] < Li_half[0]+span) && (coordP1[0] > Li_half[0]-span) ){
             for(int j = i+1; j<num_part; j++){
               //Real3D coordP2 = config->getCoordinates(j);
@@ -157,13 +157,13 @@ namespace espressopp {
                       if( bin < rdfN){
                         histogram[bin] += 1.0;
                       }
-                      num_pairs += 1;                  
+                      num_pairs += 1;
 
-                  }            
+                  }
               }
             }
         }
-        
+
         /*if(system.comm->rank()==0){
           perc = (int)(100*(real)(i-mini)/(real)(maxi-mini));
           if(perc>perc1){
@@ -177,7 +177,7 @@ namespace espressopp {
 
       real totHistogram[rdfN];
       boost::mpi::all_reduce(*system.comm, histogram, rdfN, totHistogram, plus<real>());
-    
+
       int tot_num_pairs = 0;
       boost::mpi::all_reduce(*system.comm, num_pairs, tot_num_pairs, plus<int>());
       //std::cout << tot_num_pairs << "\n";
@@ -188,12 +188,12 @@ namespace espressopp {
       real rho = (real)1.0 / (Li[0]*Li[1]*Li[2]);
       //real factor = 2.0 * M_PIl * dr * rho * (real)nconfigs * (real)num_part;
       real factor = 4.0 * M_PIl * dr * rho * (real)nconfigs * (real)tot_num_pairs;
-      
+
       for(int i=0; i < rdfN; i++){
         real radius = (i + 0.5) * dr;
         totHistogram[i] /= factor * (radius*radius + dr*dr / 12.0);
       }
-      
+
       python::list pyli;
       for(int i=0; i < rdfN; i++){
         pyli.append( totHistogram[i] );
